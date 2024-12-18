@@ -20,6 +20,7 @@ import math
 def load_csv(file_path):
     return pd.read_csv(file_path, usecols=["response", "response_type", "practice_trial", "trials.thisIndex"])
 
+
 def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
   rect = Rectangle((x, y), width, height, facecolor=bgcolor)
   ax.add_patch(rect)
@@ -67,21 +68,21 @@ def show_heatmaps(vmin_val, vmax_val, matrices, rows, cols, titles, cbar_label=N
     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
     fig, axs = plt.subplots(rows, cols, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))
 
-    # Flatten the axes array if it is 2D
-    if isinstance(axs, np.ndarray):
-        axs = axs.ravel()
-    else:
-        axs = [axs]
+#     # Flatten the axes array if it is 2D
+#     if isinstance(axs, np.ndarray):
+#         axs = axs.ravel()
+#     else:
+#         axs = [axs]
 
-    for i, (matrix, title) in enumerate(zip(matrices, titles)):
-        ax = axs[i]
+#     for i, (matrix, title) in enumerate(zip(matrices, titles)):
+#         ax = axs[i]
         
         im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
         ax.set_title(title, fontsize=14)
 
-        # Set axis labels
-        ax.set_xlabel("Right")  # Label for x-axis
-        ax.set_ylabel("Left")   # Label for y-axis
+#         # Set axis labels
+#         ax.set_xlabel("Right")  # Label for x-axis
+#         ax.set_ylabel("Left")   # Label for y-axis
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -89,33 +90,32 @@ def show_heatmaps(vmin_val, vmax_val, matrices, rows, cols, titles, cbar_label=N
         cbar.set_label(cbar_label, fontsize=14)
         cbar.ax.tick_params(labelsize=14)
 
-        # Adjust the height of the color bar
-        position = cax.get_position()
-        new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
-        cax.set_position(new_position)
+#         # Adjust the height of the color bar
+#         position = cax.get_position()
+#         new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
+#         cax.set_position(new_position)
 
-        if color_labels is not None:
-            ax.axis('off')
-            for idx, color in enumerate(color_labels):
-                add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
-                add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
+#         if color_labels is not None:
+#             ax.axis('off')
+#             for idx, color in enumerate(color_labels):
+#                 add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
+#                 add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
 
-            ax.set_aspect('equal')
-            ax.set_xlim(-3.0, matrix.shape[1])
-            ax.set_ylim(-1, len(color_labels) + 1.4)
-            ax.invert_yaxis()
+#             ax.set_aspect('equal')
+#             ax.set_xlim(-3.0, matrix.shape[1])
+#             ax.set_ylim(-1, len(color_labels) + 1.4)
+#             ax.invert_yaxis()
 
-            for spine in ax.spines.values():
-                spine.set_visible(False)
+#             for spine in ax.spines.values():
+#                 spine.set_visible(False)
 
-    # Hide unused axes
-    for ax in axs[num_plots:]:
-        ax.axis('off')
+#     # Hide unused axes
+#     for ax in axs[num_plots:]:
+#         ax.axis('off')
 
-    plt.tight_layout()
-    plt.show()
+#     plt.tight_layout()
+#     plt.show()
 
-"""
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)
     fig, axs = plt.subplots(1, num_plots, figsize=(5*num_plots, 5))
@@ -159,7 +159,7 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_l
 
     plt.tight_layout()
     plt.show()
-"""
+
 def show_heatmap(matrix, title, cbar_label=None, color_labels=None):
     fig, ax = plt.subplots(figsize=(5, 5))
 
@@ -198,8 +198,104 @@ def show_heatmap(matrix, title, cbar_label=None, color_labels=None):
     plt.show()
 
 
-def transform_value(value):
-    return -value + 3.5
+def transform_values(matrix):
+    # Define the transformation mapping
+    transform_map = {
+        0: 4,
+        1: 3,
+        2: 2,
+        3: 1,
+        4: -1,
+        5: -2,
+        6: -3,
+        7: -4
+    }
+
+    # Vectorized transformation approach
+    # We can use a vectorized operation by creating a look-up array.
+   
+    # Vectorized transformation using a lookup array
+    lookup = np.array([transform_map[i] for i in range(8)], dtype=int)
+
+    # Ensure the matrix contains valid indices (0-7)
+    if not np.all((matrix >= 0) & (matrix <= 7)):
+        raise ValueError("Matrix contains values outside the range 0-7.")
+
+    # Apply the transformation
+    transformed_matrix = lookup[matrix]
+    return transformed_matrix
+
+def compute_color_preference_distance_matrix(matrix):
+    """
+    Computes the color preference distance matrix from the given matrix.
+    Diagonal values are directly copied from the original matrix.
+
+    :param matrix: A 12x12 numpy array with integer values ranging from -4 to 4
+    :return: A 12x12 numpy array representing the color preference distance matrix
+    """
+    # Ensure the input is a numpy array
+    matrix = np.array(matrix)
+
+    # Initialize the distance matrix with zeros
+    distance_matrix = np.zeros_like(matrix, dtype=float)
+
+    # Iterate over each pair of cells (i, j) and (j, i)
+    for i in range(matrix.shape[0]):
+        for j in range(i, matrix.shape[1]):
+            if i == j:  # Diagonal values
+                distance_matrix[i, j] = matrix[i, j]
+            else:  # Off-diagonal values
+                value1 = matrix[i, j]
+                value2 = matrix[j, i]
+
+                # Special case: if values are -1 and 1, set distance to 0
+                if (value1 == -1 and value2 == 1) or (value1 == 1 and value2 == -1):
+                    distance = 0
+                else:
+                    # Flip one value if both are positive or both are negative
+                    if (value1 > 0 and value2 > 0) or (value1 < 0 and value2 < 0):
+                        value2 = -value2
+
+                    # Compute the average of the absolute values
+                    distance = (abs(value1) + abs(value2)) / 2
+
+                # Assign the distance to the distance matrix
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
+
+    return distance_matrix
+
+def compute_color_similarity_distance_matrix(matrix):
+    """
+    Computes the color similarity distance matrix from the given matrix.
+    Diagonal values are directly copied from the original matrix.
+
+    :param matrix: A 12x12 numpy array with integer values ranging from -4 to 4
+    :return: A 12x12 numpy array representing the color similarity distance matrix
+    """
+    # Ensure the input is a numpy array
+    matrix = np.array(matrix)
+
+    # Initialize the distance matrix with zeros
+    distance_matrix = np.zeros_like(matrix, dtype=float)
+
+    # Iterate over each pair of cells (i, j) and (j, i)
+    for i in range(matrix.shape[0]):
+        for j in range(i, matrix.shape[1]):
+            if i == j:  # Diagonal values
+                distance_matrix[i, j] = matrix[i, j]
+            else:  # Off-diagonal values
+                value1 = matrix[i, j]
+                value2 = matrix[j, i]
+
+                # Compute the average of the absolute values
+                distance = (value1 + value2) / 2
+
+                # Assign the distance to the distance matrix
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
+    return distance_matrix
+
 
 def RSA(matrix1, matrix2, method='pearson'):
   upper_tri_1 = matrix1[np.triu_indices(matrix1.shape[0], k=1)]

@@ -412,6 +412,8 @@ def GWD_and_plot(matrix1, matrix2, epsilons):
     best_eps = epsilons[best_eps_idx]
     OT_plan = OT_plans[best_eps_idx]
     matching_rate = matching_rates[best_eps_idx]
+    if min_gwd == 0:
+        print(f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%')
 
     show_heatmaps(0, 0.1, matrices=[OT_plan], titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'])
 

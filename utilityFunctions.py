@@ -383,39 +383,54 @@ def compute_min_gwd(matrix_1, matrix_2, epsilons):
     return min(gwds)
 
 def GWD_and_plot(matrix1, matrix2, epsilons):
-    
     OT_plans = []
     gwds = []
     matching_rates = []
+    valid_epsilons = []
 
     for epsilon in epsilons:
-      OT, gw_log = ot.gromov.entropic_gromov_wasserstein(C1=matrix1, C2=matrix2 , epsilon=epsilon, loss_fun="square_loss", log=True)  # optimization
-      gwd = gw_log['gw_dist']
-      matching_rate = comp_matching_rate(OT, k=1)  # calculate the top 1 matching rate
-      OT_plans.append(OT)
-      gwds.append(gwd)
-      matching_rates.append(matching_rate)
+        OT, gw_log = ot.gromov.entropic_gromov_wasserstein(
+            C1=matrix1, C2=matrix2, epsilon=epsilon, loss_fun="square_loss", log=True
+        )  # optimization
+        
+        # Check if the transportation matrix is all zeros
+        if not OT.any():
+            print(f"Skipping epsilon={epsilon} because it results in a zero transportation matrix.")
+            continue
 
-      
-    plt.scatter(epsilons, gwds, c=matching_rates)
+        gwd = gw_log['gw_dist']
+        matching_rate = comp_matching_rate(OT, k=1)  # calculate the top-1 matching rate
+
+        OT_plans.append(OT)
+        gwds.append(gwd)
+        matching_rates.append(matching_rate)
+        valid_epsilons.append(epsilon)
+
+    if not gwds:
+        raise ValueError("No valid epsilon values resulted in a non-zero transportation matrix.")
+
+    plt.scatter(valid_epsilons, gwds, c=matching_rates)
     plt.xlabel("epsilon")
     plt.ylabel("GWD")
     plt.xscale('log')
-    plt.grid(True, which = 'both')
+    plt.grid(True, which='both')
     cbar = plt.colorbar()
     cbar.set_label(label='Matching Rate (%)')
     plt.show()
 
-    # extract the best epsilon that minimizes the GWD
+    # Extract the best epsilon that minimizes the GWD
     min_gwd = min(gwds)
     best_eps_idx = gwds.index(min_gwd)
-    best_eps = epsilons[best_eps_idx]
+    best_eps = valid_epsilons[best_eps_idx]
     OT_plan = OT_plans[best_eps_idx]
     matching_rate = matching_rates[best_eps_idx]
+
     if min_gwd == 0:
         print(f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%')
 
-    show_heatmaps(0, 0.1, matrices=[OT_plan], titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'])
+    show_heatmaps(0, 0.1, matrices=[OT_plan], titles=[
+        f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'
+    ])
 
     return OT_plan, gwds, matching_rates
 

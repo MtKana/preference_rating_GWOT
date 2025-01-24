@@ -65,7 +65,7 @@ def sort_files_in_directory(directory_path):
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)
     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
-    fig, axs = plt.subplots(grid_size, grid_size, figsize=(5 * grid_size, 5 * grid_size))
+    fig, axs = plt.subplots(grid_size, grid_size, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))
 
     # Flatten the axes array if it is 2D
     if isinstance(axs, np.ndarray):

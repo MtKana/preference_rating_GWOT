@@ -62,10 +62,10 @@ def sort_files_in_directory(directory_path):
 #   color_labels: dictionary, dictionary of colours and their ids (x/y axis position), {colour:id}
 # OUTPUTS:
 #   Returns nothing, just plots
-def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
+def show_heatmaps(vmin_val, vmax_val, rows, cols, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)
     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
-    fig, axs = plt.subplots(grid_size, grid_size, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))
+    fig, axs = plt.subplots(rows, cols, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))
 
     # Flatten the axes array if it is 2D
     if isinstance(axs, np.ndarray):
@@ -77,7 +77,7 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_l
         ax = axs[i]
         
         im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
-        ax.set_title(title, fontsize=18)
+        ax.set_title(title, fontsize=14)
 
         # Set axis labels
         ax.set_xlabel("Right")  # Label for x-axis
@@ -86,8 +86,8 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_l
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label(cbar_label, fontsize=18)
-        cbar.ax.tick_params(labelsize=18)
+        cbar.set_label(cbar_label, fontsize=14)
+        cbar.ax.tick_params(labelsize=14)
 
         # Adjust the height of the color bar
         position = cax.get_position()

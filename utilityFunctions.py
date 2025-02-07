@@ -20,6 +20,7 @@ import math
 def load_csv(file_path):
     return pd.read_csv(file_path, usecols=["response", "response_type", "practice_trial", "trials.thisIndex"])
 
+
 def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
   rect = Rectangle((x, y), width, height, facecolor=bgcolor)
   ax.add_patch(rect)
@@ -62,60 +63,59 @@ def sort_files_in_directory(directory_path):
 #   color_labels: dictionary, dictionary of colours and their ids (x/y axis position), {colour:id}
 # OUTPUTS:
 #   Returns nothing, just plots
-def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
-    num_plots = len(matrices)
-    grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
-    fig, axs = plt.subplots(grid_size, grid_size, figsize=(5 * grid_size, 5 * grid_size))
+# def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
+#     num_plots = len(matrices)
+#     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
+#     fig, axs = plt.subplots(grid_size, grid_size, figsize=(5 * grid_size, 5 * grid_size))
 
-    # Flatten the axes array if it is 2D
-    if isinstance(axs, np.ndarray):
-        axs = axs.ravel()
-    else:
-        axs = [axs]
+#     # Flatten the axes array if it is 2D
+#     if isinstance(axs, np.ndarray):
+#         axs = axs.ravel()
+#     else:
+#         axs = [axs]
 
-    for i, (matrix, title) in enumerate(zip(matrices, titles)):
-        ax = axs[i]
+#     for i, (matrix, title) in enumerate(zip(matrices, titles)):
+#         ax = axs[i]
         
-        im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
-        ax.set_title(title, fontsize=18)
+#         im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
+#         ax.set_title(title, fontsize=18)
 
-        # Set axis labels
-        ax.set_xlabel("Right")  # Label for x-axis
-        ax.set_ylabel("Left")   # Label for y-axis
+#         # Set axis labels
+#         ax.set_xlabel("Right")  # Label for x-axis
+#         ax.set_ylabel("Left")   # Label for y-axis
 
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label(cbar_label, fontsize=18)
-        cbar.ax.tick_params(labelsize=18)
+#         divider = make_axes_locatable(ax)
+#         cax = divider.append_axes("right", size="5%", pad=0.05)
+#         cbar = fig.colorbar(im, cax=cax)
+#         cbar.set_label(cbar_label, fontsize=18)
+#         cbar.ax.tick_params(labelsize=18)
 
-        # Adjust the height of the color bar
-        position = cax.get_position()
-        new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
-        cax.set_position(new_position)
+#         # Adjust the height of the color bar
+#         position = cax.get_position()
+#         new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
+#         cax.set_position(new_position)
 
-        if color_labels is not None:
-            ax.axis('off')
-            for idx, color in enumerate(color_labels):
-                add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
-                add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
+#         if color_labels is not None:
+#             ax.axis('off')
+#             for idx, color in enumerate(color_labels):
+#                 add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
+#                 add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
 
-            ax.set_aspect('equal')
-            ax.set_xlim(-3.0, matrix.shape[1])
-            ax.set_ylim(-1, len(color_labels) + 1.4)
-            ax.invert_yaxis()
+#             ax.set_aspect('equal')
+#             ax.set_xlim(-3.0, matrix.shape[1])
+#             ax.set_ylim(-1, len(color_labels) + 1.4)
+#             ax.invert_yaxis()
 
-            for spine in ax.spines.values():
-                spine.set_visible(False)
+#             for spine in ax.spines.values():
+#                 spine.set_visible(False)
 
-    # Hide unused axes
-    for ax in axs[num_plots:]:
-        ax.axis('off')
+#     # Hide unused axes
+#     for ax in axs[num_plots:]:
+#         ax.axis('off')
 
-    plt.tight_layout()
-    plt.show()
+#     plt.tight_layout()
+#     plt.show()
 
-"""
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)
     fig, axs = plt.subplots(1, num_plots, figsize=(5*num_plots, 5))
@@ -159,7 +159,7 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_l
 
     plt.tight_layout()
     plt.show()
-"""
+
 def show_heatmap(matrix, title, cbar_label=None, color_labels=None):
     fig, ax = plt.subplots(figsize=(5, 5))
 
@@ -198,8 +198,104 @@ def show_heatmap(matrix, title, cbar_label=None, color_labels=None):
     plt.show()
 
 
-def transform_value(value):
-    return -value + 3.5
+def transform_values(matrix):
+    # Define the transformation mapping
+    transform_map = {
+        0: 4,
+        1: 3,
+        2: 2,
+        3: 1,
+        4: -1,
+        5: -2,
+        6: -3,
+        7: -4
+    }
+
+    # Vectorized transformation approach
+    # We can use a vectorized operation by creating a look-up array.
+   
+    # Vectorized transformation using a lookup array
+    lookup = np.array([transform_map[i] for i in range(8)], dtype=int)
+
+    # Ensure the matrix contains valid indices (0-7)
+    if not np.all((matrix >= 0) & (matrix <= 7)):
+        raise ValueError("Matrix contains values outside the range 0-7.")
+
+    # Apply the transformation
+    transformed_matrix = lookup[matrix]
+    return transformed_matrix
+
+def compute_color_preference_distance_matrix(matrix):
+    """
+    Computes the color preference distance matrix from the given matrix.
+    Diagonal values are directly copied from the original matrix.
+
+    :param matrix: A 12x12 numpy array with integer values ranging from -4 to 4
+    :return: A 12x12 numpy array representing the color preference distance matrix
+    """
+    # Ensure the input is a numpy array
+    matrix = np.array(matrix)
+
+    # Initialize the distance matrix with zeros
+    distance_matrix = np.zeros_like(matrix, dtype=float)
+
+    # Iterate over each pair of cells (i, j) and (j, i)
+    for i in range(matrix.shape[0]):
+        for j in range(i, matrix.shape[1]):
+            if i == j:  # Diagonal values
+                distance_matrix[i, j] = matrix[i, j]
+            else:  # Off-diagonal values
+                value1 = matrix[i, j]
+                value2 = matrix[j, i]
+
+                # Special case: if values are -1 and 1, set distance to 0
+                if (value1 == -1 and value2 == 1) or (value1 == 1 and value2 == -1):
+                    distance = 0
+                else:
+                    # Flip one value if both are positive or both are negative
+                    if (value1 > 0 and value2 > 0) or (value1 < 0 and value2 < 0):
+                        value2 = -value2
+
+                    # Compute the average of the absolute values
+                    distance = (abs(value1) + abs(value2)) / 2
+
+                # Assign the distance to the distance matrix
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
+
+    return distance_matrix
+
+def compute_color_similarity_distance_matrix(matrix):
+    """
+    Computes the color similarity distance matrix from the given matrix.
+    Diagonal values are directly copied from the original matrix.
+
+    :param matrix: A 12x12 numpy array with integer values ranging from -4 to 4
+    :return: A 12x12 numpy array representing the color similarity distance matrix
+    """
+    # Ensure the input is a numpy array
+    matrix = np.array(matrix)
+
+    # Initialize the distance matrix with zeros
+    distance_matrix = np.zeros_like(matrix, dtype=float)
+
+    # Iterate over each pair of cells (i, j) and (j, i)
+    for i in range(matrix.shape[0]):
+        for j in range(i, matrix.shape[1]):
+            if i == j:  # Diagonal values
+                distance_matrix[i, j] = matrix[i, j]
+            else:  # Off-diagonal values
+                value1 = matrix[i, j]
+                value2 = matrix[j, i]
+
+                # Compute the average of the absolute values
+                distance = (value1 + value2) / 2
+
+                # Assign the distance to the distance matrix
+                distance_matrix[i, j] = distance
+                distance_matrix[j, i] = distance
+    return distance_matrix
+
 
 def RSA(matrix1, matrix2, method='pearson'):
   upper_tri_1 = matrix1[np.triu_indices(matrix1.shape[0], k=1)]
@@ -287,37 +383,54 @@ def compute_min_gwd(matrix_1, matrix_2, epsilons):
     return min(gwds)
 
 def GWD_and_plot(matrix1, matrix2, epsilons):
-    
     OT_plans = []
     gwds = []
     matching_rates = []
+    valid_epsilons = []
 
     for epsilon in epsilons:
-      OT, gw_log = ot.gromov.entropic_gromov_wasserstein(C1=matrix1, C2=matrix2 , epsilon=epsilon, loss_fun="square_loss", log=True)  # optimization
-      gwd = gw_log['gw_dist']
-      matching_rate = comp_matching_rate(OT, k=1)  # calculate the top 1 matching rate
-      OT_plans.append(OT)
-      gwds.append(gwd)
-      matching_rates.append(matching_rate)
+        OT, gw_log = ot.gromov.entropic_gromov_wasserstein(
+            C1=matrix1, C2=matrix2, epsilon=epsilon, loss_fun="square_loss", log=True
+        )  # optimization
+        
+        # Check if the transportation matrix is all zeros
+        if not OT.any():
+            print(f"Skipping epsilon={epsilon} because it results in a zero transportation matrix.")
+            continue
 
-      
-    plt.scatter(epsilons, gwds, c=matching_rates)
+        gwd = gw_log['gw_dist']
+        matching_rate = comp_matching_rate(OT, k=1)  # calculate the top-1 matching rate
+
+        OT_plans.append(OT)
+        gwds.append(gwd)
+        matching_rates.append(matching_rate)
+        valid_epsilons.append(epsilon)
+
+    if not gwds:
+        raise ValueError("No valid epsilon values resulted in a non-zero transportation matrix.")
+
+    plt.scatter(valid_epsilons, gwds, c=matching_rates)
     plt.xlabel("epsilon")
     plt.ylabel("GWD")
     plt.xscale('log')
-    plt.grid(True, which = 'both')
+    plt.grid(True, which='both')
     cbar = plt.colorbar()
     cbar.set_label(label='Matching Rate (%)')
     plt.show()
 
-    # extract the best epsilon that minimizes the GWD
+    # Extract the best epsilon that minimizes the GWD
     min_gwd = min(gwds)
     best_eps_idx = gwds.index(min_gwd)
-    best_eps = epsilons[best_eps_idx]
+    best_eps = valid_epsilons[best_eps_idx]
     OT_plan = OT_plans[best_eps_idx]
     matching_rate = matching_rates[best_eps_idx]
 
-    show_heatmaps(0, 0.1, matrices=[OT_plan], titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'])
+    if min_gwd == 0:
+        print(f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%')
+
+    show_heatmaps(0, 0.1, matrices=[OT_plan], titles=[
+        f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'
+    ])
 
     return OT_plan, gwds, matching_rates
 
@@ -394,3 +507,58 @@ def shuffle_row_and_asymmetritisize(matrix, size):
             matrix_copy[j, i] = -matrix_copy[i, j]
 
     return matrix_copy
+
+# Define unique colors
+def getUniqueColours():
+    unique_colours = np.array(['#d2b700', '#db8b08', '#c7512c', '#c13547', '#a03663', '#753a7a', '#4b488e', '#005692', '#006a8b', '#007b75', '#008a52', '#9aa400'])
+    colour_index = {colour: idx for idx, colour in enumerate(unique_colours)}
+    return colour_index
+
+# Function to compute GWD and plot the OT plan as well as GWD values
+def pairwise_csv_GWOT(file1, file2, eps_range, n_eps):
+    # Get color index dictionary
+    colour_index = getUniqueColours()
+    matrix_size = len(colour_index)
+
+    # Generate epsilon values
+    epsilons = np.logspace(np.log10(eps_range[0]), np.log10(eps_range[1]), n_eps)
+
+    # Initialize matrices
+    matrix_1 = np.zeros((matrix_size, matrix_size))
+    matrix_2 = np.zeros((matrix_size, matrix_size))
+
+    # Load and process the first CSV file
+    df_PM1 = pd.read_csv(file1)
+    df_PM1 = df_PM1[(df_PM1['practice_trial'] != 1) & (df_PM1['response_type'] == response_type)]
+    colour1_1 = df_PM1['colour1']
+    colour2_1 = df_PM1['colour2']
+    target_preference_1 = df_PM1['response']
+
+    for c1, c2, tp in zip(colour1_1, colour2_1, target_preference_1):
+        I = colour_index[c1]
+        j = colour_index[c2]
+        matrix_1[I, j] = tp
+
+    matrix_1 = matrix_1.astype(int)
+
+    # Load and process the second CSV file
+    df_PM2 = pd.read_csv(file2)
+    df_PM2 = df_PM2[(df_PM2['practice_trial'] != 1) & (df_PM2['response_type'] == response_type)]
+    colour1_2 = df_PM2['colour1']
+    colour2_2 = df_PM2['colour2']
+    target_preference_2 = df_PM2['response']
+
+    for c1, c2, tp in zip(colour1_2, colour2_2, target_preference_2):
+        I = colour_index[c1]
+        j = colour_index[c2]
+        matrix_2[I, j] = tp
+
+    matrix_2 = matrix_2.astype(int)
+
+    # Calculate RSA correlation
+    RSA_corr = utilityFunctions.RSA(matrix_1, matrix_2)
+    print('RSA correlation coefficient : ', RSA_corr)
+
+    # Calculate GWD and plot
+    OT_plan_as, gwds_as, matching_rates_as = utilityFunctions.GWD_and_plot(matrix_1, matrix_2, epsilons)
+    print('Minimum GWD: ', min(gwds_as))

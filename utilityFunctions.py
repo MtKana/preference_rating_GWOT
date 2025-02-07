@@ -507,3 +507,58 @@ def shuffle_row_and_asymmetritisize(matrix, size):
             matrix_copy[j, i] = -matrix_copy[i, j]
 
     return matrix_copy
+
+# Define unique colors
+def getUniqueColours():
+    unique_colours = np.array(['#d2b700', '#db8b08', '#c7512c', '#c13547', '#a03663', '#753a7a', '#4b488e', '#005692', '#006a8b', '#007b75', '#008a52', '#9aa400'])
+    colour_index = {colour: idx for idx, colour in enumerate(unique_colours)}
+    return colour_index
+
+# Function to compute GWD and plot the OT plan as well as GWD values
+def pairwise_csv_GWOT(file1, file2, eps_range, n_eps):
+    # Get color index dictionary
+    colour_index = getUniqueColours()
+    matrix_size = len(colour_index)
+
+    # Generate epsilon values
+    epsilons = np.logspace(np.log10(eps_range[0]), np.log10(eps_range[1]), n_eps)
+
+    # Initialize matrices
+    matrix_1 = np.zeros((matrix_size, matrix_size))
+    matrix_2 = np.zeros((matrix_size, matrix_size))
+
+    # Load and process the first CSV file
+    df_PM1 = pd.read_csv(file1)
+    df_PM1 = df_PM1[(df_PM1['practice_trial'] != 1) & (df_PM1['response_type'] == response_type)]
+    colour1_1 = df_PM1['colour1']
+    colour2_1 = df_PM1['colour2']
+    target_preference_1 = df_PM1['response']
+
+    for c1, c2, tp in zip(colour1_1, colour2_1, target_preference_1):
+        I = colour_index[c1]
+        j = colour_index[c2]
+        matrix_1[I, j] = tp
+
+    matrix_1 = matrix_1.astype(int)
+
+    # Load and process the second CSV file
+    df_PM2 = pd.read_csv(file2)
+    df_PM2 = df_PM2[(df_PM2['practice_trial'] != 1) & (df_PM2['response_type'] == response_type)]
+    colour1_2 = df_PM2['colour1']
+    colour2_2 = df_PM2['colour2']
+    target_preference_2 = df_PM2['response']
+
+    for c1, c2, tp in zip(colour1_2, colour2_2, target_preference_2):
+        I = colour_index[c1]
+        j = colour_index[c2]
+        matrix_2[I, j] = tp
+
+    matrix_2 = matrix_2.astype(int)
+
+    # Calculate RSA correlation
+    RSA_corr = utilityFunctions.RSA(matrix_1, matrix_2)
+    print('RSA correlation coefficient : ', RSA_corr)
+
+    # Calculate GWD and plot
+    OT_plan_as, gwds_as, matching_rates_as = utilityFunctions.GWD_and_plot(matrix_1, matrix_2, epsilons)
+    print('Minimum GWD: ', min(gwds_as))

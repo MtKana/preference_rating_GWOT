@@ -63,58 +63,58 @@ def sort_files_in_directory(directory_path):
 #   color_labels: dictionary, dictionary of colours and their ids (x/y axis position), {colour:id}
 # OUTPUTS:
 #   Returns nothing, just plots
-# def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
-#     num_plots = len(matrices)
-#     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
-#     fig, axs = plt.subplots(grid_size, grid_size, figsize=(5 * grid_size, 5 * grid_size))
+def show_heatmaps2(vmin_val, vmax_val, matrices, rows, cols, titles, cbar_label=None, color_labels=None):
+    num_plots = len(matrices)
+    grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
+    fig, axs = plt.subplots(rows, cols, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))
 
-#     # Flatten the axes array if it is 2D
-#     if isinstance(axs, np.ndarray):
-#         axs = axs.ravel()
-#     else:
-#         axs = [axs]
+    # Flatten the axes array if it is 2D
+    if isinstance(axs, np.ndarray):
+        axs = axs.ravel()
+    else:
+        axs = [axs]
 
-#     for i, (matrix, title) in enumerate(zip(matrices, titles)):
-#         ax = axs[i]
+    for i, (matrix, title) in enumerate(zip(matrices, titles)):
+        ax = axs[i]
         
-#         im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
-#         ax.set_title(title, fontsize=18)
+        im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
+        ax.set_title(title, fontsize=14)
 
-#         # Set axis labels
-#         ax.set_xlabel("Right")  # Label for x-axis
-#         ax.set_ylabel("Left")   # Label for y-axis
+        # Set axis labels
+        ax.set_xlabel("Right")  # Label for x-axis
+        ax.set_ylabel("Left")   # Label for y-axis
 
-#         divider = make_axes_locatable(ax)
-#         cax = divider.append_axes("right", size="5%", pad=0.05)
-#         cbar = fig.colorbar(im, cax=cax)
-#         cbar.set_label(cbar_label, fontsize=18)
-#         cbar.ax.tick_params(labelsize=18)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(im, cax=cax)
+        cbar.set_label(cbar_label, fontsize=14)
+        cbar.ax.tick_params(labelsize=14)
 
-#         # Adjust the height of the color bar
-#         position = cax.get_position()
-#         new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
-#         cax.set_position(new_position)
+        # Adjust the height of the color bar
+        position = cax.get_position()
+        new_position = [position.x0, position.y0 + 0.1, position.width, position.height * 0.8]
+        cax.set_position(new_position)
 
-#         if color_labels is not None:
-#             ax.axis('off')
-#             for idx, color in enumerate(color_labels):
-#                 add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
-#                 add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
+        if color_labels is not None:
+            ax.axis('off')
+            for idx, color in enumerate(color_labels):
+                add_colored_label(ax, -1.5, idx - 0.5, color, width=0.8)
+                add_colored_label(ax, idx - 0.5, matrix.shape[1] - 0.2, color, height=0.8)
 
-#             ax.set_aspect('equal')
-#             ax.set_xlim(-3.0, matrix.shape[1])
-#             ax.set_ylim(-1, len(color_labels) + 1.4)
-#             ax.invert_yaxis()
+            ax.set_aspect('equal')
+            ax.set_xlim(-3.0, matrix.shape[1])
+            ax.set_ylim(-1, len(color_labels) + 1.4)
+            ax.invert_yaxis()
 
-#             for spine in ax.spines.values():
-#                 spine.set_visible(False)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
 
-#     # Hide unused axes
-#     for ax in axs[num_plots:]:
-#         ax.axis('off')
+    # Hide unused axes
+    for ax in axs[num_plots:]:
+        ax.axis('off')
 
-#     plt.tight_layout()
-#     plt.show()
+    plt.tight_layout()
+    plt.show()
 
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)

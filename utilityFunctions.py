@@ -63,7 +63,7 @@ def sort_files_in_directory(directory_path):
 #   color_labels: dictionary, dictionary of colours and their ids (x/y axis position), {colour:id}
 # OUTPUTS:
 #   Returns nothing, just plots
-def show_heatmaps(vmin_val, vmax_val, matrices, rows, cols, titles, cbar_label=None, color_labels=None):
+def show_heatmaps2(vmin_val, vmax_val, matrices, rows, cols, titles, cbar_label=None, color_labels=None):
     num_plots = len(matrices)
     grid_size = math.ceil(math.sqrt(num_plots))  # Determine the grid size
     fig, axs = plt.subplots(rows, cols, figsize=(16, 9)) #figsize=(5 * grid_size, 5 * grid_size))

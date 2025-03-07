@@ -119,6 +119,45 @@ def OT_epsilon(epsilons, OT_plans, gwds, e_ind, matching_rates):
         titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n matching rate : {matching_rate:.1f}%'],
         color_labels=unique_colours)
     
+# Function to plot the embeddings
+def plot_embeddings(embeddings, titles, color_labels, overlay=False):
+    fig = go.Figure()
+    
+    if overlay:
+        for i, embedding in enumerate(embeddings):
+            fig.add_trace(go.Scatter3d(
+                x=embedding[:, 0],
+                y=embedding[:, 1],
+                z=embedding[:, 2],
+                mode='markers+text',
+                marker=dict(size=10, color=color_labels),
+                text=color_labels,
+                textposition="top center",
+                name=titles[i]
+            ))
+    else:
+        for i, embedding in enumerate(embeddings):
+            fig = go.Figure()
+            fig.add_trace(go.Scatter3d(
+                x=embedding[:, 0],
+                y=embedding[:, 1],
+                z=embedding[:, 2],
+                mode='markers+text',
+                marker=dict(size=10, color=color_labels),
+                text=color_labels,
+                textposition="top center"
+            ))
+            fig.update_layout(
+                title=f'MDS Embedding - {titles[i]}',
+                scene=dict(
+                    xaxis_title='Dimension 1',
+                    yaxis_title='Dimension 2',
+                    zaxis_title='Dimension 3'
+                ),
+                height=800
+            )
+    fig.show()
+    
 
 # # Function to compute GWD and plot the OT plan as well as GWD values
 # def pairwise_csv_GWOT(file1, file2, eps_range, n_eps, response_type):

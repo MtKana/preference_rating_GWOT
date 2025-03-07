@@ -166,17 +166,17 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
     for i, (matrix, title) in enumerate(zip(matrices, titles)):
         ax = axs[i]
         im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
-        ax.set_title(title, fontsize=17)
-        ax.set_xlabel("Right", fontsize=15) 
-        ax.set_ylabel("Left", fontsize=15)  
+        ax.set_title(title, fontsize=23)
+        ax.set_xlabel("Right", fontsize=23) 
+        ax.set_ylabel("Left", fontsize=23)  
         ax.set_xticks([])
         ax.set_yticks([])
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cbar = fig.colorbar(im, cax=cax)
-        cbar.set_label(cbar_label, fontsize=15)
-        cbar.ax.tick_params(labelsize=15)
+        cbar.set_label(cbar_label, fontsize=21)
+        cbar.ax.tick_params(labelsize=21)
 
         # Adjust the height of the color bar
         position = cax.get_position()
@@ -356,53 +356,117 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
 #     return distance_matrix
 
 def RSA(matrix1, matrix2, method='pearson'):
-  upper_tri_1 = matrix1[np.triu_indices(matrix1.shape[0], k=1)]
-  upper_tri_2 = matrix2[np.triu_indices(matrix2.shape[0], k=1)]
-  if method == 'pearson':
-    corr, _ = pearsonr(upper_tri_1, upper_tri_2)
-  elif method == 'spearman':
-    corr, _ = spearmanr(upper_tri_1, upper_tri_2)
+    flat_1 = matrix1.flatten()
+    flat_2 = matrix2.flatten()
 
-  return corr
-
-# Function to plot the embeddings
-def plot_embeddings(embeddings, titles, color_labels, overlay=False):
-    fig = go.Figure()
-    
-    if overlay:
-        for i, embedding in enumerate(embeddings):
-            fig.add_trace(go.Scatter3d(
-                x=embedding[:, 0],
-                y=embedding[:, 1],
-                z=embedding[:, 2],
-                mode='markers+text',
-                marker=dict(size=10, color=color_labels),
-                text=color_labels,
-                textposition="top center",
-                name=titles[i]
-            ))
+    if method == 'pearson':
+        corr, _ = pearsonr(flat_1, flat_2)
+    elif method == 'spearman':
+        corr, _ = spearmanr(flat_1, flat_2)
     else:
-        for i, embedding in enumerate(embeddings):
-            fig = go.Figure()
-            fig.add_trace(go.Scatter3d(
-                x=embedding[:, 0],
-                y=embedding[:, 1],
-                z=embedding[:, 2],
-                mode='markers+text',
-                marker=dict(size=10, color=color_labels),
-                text=color_labels,
-                textposition="top center"
-            ))
-            fig.update_layout(
-                title=f'MDS Embedding - {titles[i]}',
-                scene=dict(
-                    xaxis_title='Dimension 1',
-                    yaxis_title='Dimension 2',
-                    zaxis_title='Dimension 3'
-                ),
-                height=800
-            )
-    fig.show()
+        raise ValueError("Invalid method. Choose 'pearson' or 'spearman'.")
+
+    return corr
+
+def compute_correlations(matrices):
+    matrix_names = list(matrices.keys())
+    correlation_matrix = np.zeros((len(matrix_names), len(matrix_names)))
+    
+    # Compute correlation matrix
+    for i in range(len(matrix_names)):
+        for j in range(i, len(matrix_names)):
+            mat1, mat2 = matrices[matrix_names[i]], matrices[matrix_names[j]]
+            correlation = RSA(mat1, mat2)  
+            correlation_matrix[i, j] = correlation_matrix[j, i] = correlation
+
+    plt.figure(figsize=(10, 8))
+    heatmap = sns.heatmap(
+        correlation_matrix, 
+        annot=True, 
+        xticklabels=matrix_names, 
+        yticklabels=matrix_names, 
+        cmap='coolwarm', 
+        fmt=".2f", 
+        square=True, 
+        linewidths=0.5, 
+        annot_kws={"size": 22},  
+        vmin=-1, vmax=1,  
+        center=0 
+    )
+
+    plt.xticks(rotation=45, ha="right", fontsize=22)
+    plt.yticks(rotation=0, fontsize=22)
+
+    cbar = heatmap.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=22)  
+    cbar.set_label('r', fontsize=27)  
+
+    plt.show()
+    
+    return correlation_matrix, matrix_names
+
+
+def perform_mds_and_plot(matrices, colour_index, n_rows, n_cols, n_components=2):
+    """
+    Performs MDS and plots results in a customizable grid layout with square subplots.
+    Ensures consistent axis limits across all subplots.
+
+    Parameters:
+        matrices (dict): Dictionary containing matrices with names as keys.
+        colour_index (dict): Dictionary mapping labels to colors.
+        n_rows (int): Number of rows for the subplot grid.
+        n_cols (int): Number of columns for the subplot grid.
+        n_components (int): Number of MDS components (default is 2).
+
+    Returns:
+        None (displays the plot).
+    """
+    mds = MDS(n_components=n_components, dissimilarity="precomputed", random_state=42)
+    
+    num_matrices = len(matrices)
+    
+    square_size = 5  
+    fig_width = max(n_cols * square_size, n_rows * square_size)
+    fig_height = fig_width 
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_width, fig_height))
+    axes = np.array(axes).flatten()  
+    
+    color_labels = list(colour_index.keys())
+    
+    all_embeddings = []  
+    
+    for title, matrix in matrices.items():
+        dist_matrix = (matrix + matrix.T) / 2  
+        embedding = mds.fit_transform(dist_matrix)
+        all_embeddings.append(embedding)
+    
+    all_points = np.vstack(all_embeddings)
+    x_min, x_max = np.min(all_points[:, 0]), np.max(all_points[:, 0])
+    y_min, y_max = np.min(all_points[:, 1]), np.max(all_points[:, 1])
+    axis_limit = max(abs(x_min), abs(x_max), abs(y_min), abs(y_max))  
+
+    for ax, (title, embedding) in zip(axes[:num_matrices], zip(matrices.keys(), all_embeddings)):
+        colors = list(colour_index.keys())
+        ax.scatter(embedding[:, 0], embedding[:, 1], c=colors, s=400)
+        
+        for i, label in enumerate(colors):
+            ax.text(embedding[i, 0], embedding[i, 1], label, fontsize=14)
+        
+        ax.set_title(title, fontsize=18)
+        ax.set_xlabel("MDS Dimension 1", fontsize=16)
+        ax.set_ylabel("MDS Dimension 2", fontsize=16)
+        ax.tick_params(axis='both', labelsize=15)
+        ax.set_aspect('equal')  
+        ax.set_xlim(-axis_limit, axis_limit) 
+        ax.set_ylim(-axis_limit, axis_limit)  
+
+    for ax in axes[num_matrices:]:
+        ax.set_visible(False)
+    
+    plt.tight_layout()
+    plt.show()
+    plt.show()
     
 # # Function to shuffle the upper and lower triangular parts of a matrix
 # def shuffle_upper_and_lower_triangular(matrix, size):

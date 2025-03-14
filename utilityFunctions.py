@@ -16,6 +16,8 @@ import plotly.graph_objs as go
 import plotly.express as px
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import math
+import itertools
+import random
 
 def sort_files_in_directory(directory_path):
     """
@@ -66,6 +68,53 @@ def load_csv_to_matrix_batch(folder_path, response_type, colour_index, matrix_si
         subject_matrices.append(subject_matrix)
     
     return subject_matrices
+
+
+def split_and_average_matrices(matrices):
+
+    def compute_all_splits(matrices):
+        """Computes all possible splits of the matrices into two equal-sized groups."""
+        num_matrices = len(matrices)
+        half_size = num_matrices // 2
+        all_possible_splits = list(itertools.combinations(matrices, half_size))
+        print(f"Number of possible splits: {len(all_possible_splits)}")
+        
+        results = []
+        checked_splits = set()
+
+        for group1 in all_possible_splits:
+            group2 = [m for m in matrices if not any(np.array_equal(m, g) for g in group1)]
+
+            # Convert to frozenset to ensure unique groups
+            if frozenset(map(id, group1)) in checked_splits:
+                continue
+            print("Checked splits")
+
+            checked_splits.add(frozenset(map(id, group1)))
+
+            avg_matrix1 = np.mean(np.array(group1), axis=0)
+            print("Averaged group 1")
+            avg_matrix2 = np.mean(np.array(group2), axis=0)
+            print("Averaged group 2")
+
+            results.append((avg_matrix1, avg_matrix2))
+            print("Appended results")
+
+        return results
+    num_matrices = len(matrices)
+    results = []
+
+    # If the number of matrices is odd, try all possible removals
+    if num_matrices % 2 == 1:
+        for removed_matrix in matrices:
+            remaining_matrices = [m for m in matrices if not np.array_equal(m, removed_matrix)]
+            results.extend(compute_all_splits(remaining_matrices))
+    else:
+        results.extend(compute_all_splits(matrices))
+
+    return results
+
+
 
 # def compute_color_preference_distance_batch(matrix_list):
 #     """
@@ -150,10 +199,6 @@ def compute_color_similarity_distance_batch(matrix_list):
     return transformed_matrices
 
 # Kana's implementation of plotting heatmaps
-def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
-    rect = Rectangle((x, y), width, height, facecolor=bgcolor)
-    ax.add_patch(rect)  
-
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label=None, color_labels=None):
     def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
         rect = Rectangle((x, y), width, height, facecolor=bgcolor)
@@ -407,20 +452,6 @@ def compute_correlations(matrices):
 
 
 def perform_mds_and_plot(matrices, colour_index, n_rows, n_cols, n_components=2):
-    """
-    Performs MDS and plots results in a customizable grid layout with square subplots.
-    Ensures consistent axis limits across all subplots.
-
-    Parameters:
-        matrices (dict): Dictionary containing matrices with names as keys.
-        colour_index (dict): Dictionary mapping labels to colors.
-        n_rows (int): Number of rows for the subplot grid.
-        n_cols (int): Number of columns for the subplot grid.
-        n_components (int): Number of MDS components (default is 2).
-
-    Returns:
-        None (displays the plot).
-    """
     mds = MDS(n_components=n_components, dissimilarity="precomputed", random_state=42)
     
     num_matrices = len(matrices)

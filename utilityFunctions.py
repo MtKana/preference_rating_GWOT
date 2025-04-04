@@ -157,7 +157,7 @@ def compute_color_preference_distance_batch(matrix_list):
     """
     transformed_matrices = []
 
-    value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
+    value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
     vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
     
     for matrix in matrix_list:
@@ -180,10 +180,7 @@ def compute_color_preference_distance_batch(matrix_list):
 def compute_color_similarity_distance_batch(matrix_list):
     """
     Transforms each 2D numpy array in the input list as follows:
-    1. Applies the given mapping to transform values.
-    2. Replaces the lower triangular values (below the diagonal) with their negative values.
-    3. Computes the average of values across the diagonal and replaces them with their absolute value.
-    4. Takes the absolute value of the diagonal elements.
+    1. Transform the values using the value map.
     """
     transformed_matrices = []
 
@@ -451,52 +448,84 @@ def compute_correlations(matrices):
     return correlation_matrix, matrix_names
 
 
-def perform_mds_and_plot(matrices, colour_index, n_rows, n_cols, n_components=2):
+def perform_mds_and_plot(matrices, titles, colour_index, n_rows, n_cols, n_components=2):
+    """
+    Performs Multidimensional Scaling (MDS) on a list of distance matrices and visualizes the
+    resulting 2D embeddings in a grid of scatter plots.
+
+    Parameters:
+    ----------
+    matrices : list[np.ndarray]
+        A list of square distance matrices (numpy arrays). Each matrix should represent
+        pairwise dissimilarities between entities.
+
+    titles : list[str]
+        A list of titles corresponding to each matrix. Must be the same length as `matrices`.
+
+    colour_index : dict[str, Any]
+        A dictionary mapping item labels to colors or indices for plotting.
+        The keys of this dictionary are used as labels in the scatter plots.
+
+    n_rows : int
+        The number of rows in the subplot grid.
+
+    n_cols : int
+        The number of columns in the subplot grid.
+
+    n_components : int, optional (default=2)
+        The number of dimensions to reduce the data to using MDS.
+        Typically 2 for 2D visualization.
+
+    Returns:
+    -------
+    None
+        Displays a matplotlib plot containing the MDS embeddings.
+    """
+    assert len(matrices) == len(titles), "Number of matrices must match number of titles"
+
     mds = MDS(n_components=n_components, dissimilarity="precomputed", random_state=42)
     
     num_matrices = len(matrices)
     
-    square_size = 5  
+    square_size = 5
     fig_width = max(n_cols * square_size, n_rows * square_size)
-    fig_height = fig_width 
+    fig_height = fig_width
 
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(fig_width, fig_height))
-    axes = np.array(axes).flatten()  
-    
+    axes = np.array(axes).flatten()
+
     color_labels = list(colour_index.keys())
-    
-    all_embeddings = []  
-    
-    for title, matrix in matrices.items():
-        dist_matrix = (matrix + matrix.T) / 2  
+    all_embeddings = []
+
+    for matrix in matrices:
+        dist_matrix = (matrix + matrix.T) / 2  # Ensure symmetry
         embedding = mds.fit_transform(dist_matrix)
         all_embeddings.append(embedding)
-    
+
     all_points = np.vstack(all_embeddings)
     x_min, x_max = np.min(all_points[:, 0]), np.max(all_points[:, 0])
     y_min, y_max = np.min(all_points[:, 1]), np.max(all_points[:, 1])
-    axis_limit = max(abs(x_min), abs(x_max), abs(y_min), abs(y_max))  
+    axis_limit = max(abs(x_min), abs(x_max), abs(y_min), abs(y_max))
 
-    for ax, (title, embedding) in zip(axes[:num_matrices], zip(matrices.keys(), all_embeddings)):
+    for ax, title, embedding in zip(axes[:num_matrices], titles, all_embeddings):
         colors = list(colour_index.keys())
         ax.scatter(embedding[:, 0], embedding[:, 1], c=colors, s=400)
-        
+
         for i, label in enumerate(colors):
             ax.text(embedding[i, 0], embedding[i, 1], label, fontsize=14)
-        
+
         ax.set_title(title, fontsize=18)
         ax.set_xlabel("MDS Dimension 1", fontsize=16)
         ax.set_ylabel("MDS Dimension 2", fontsize=16)
         ax.tick_params(axis='both', labelsize=15)
-        ax.set_aspect('equal')  
-        ax.set_xlim(-axis_limit, axis_limit) 
-        ax.set_ylim(-axis_limit, axis_limit)  
+        ax.set_aspect('equal')
+        ax.set_xlim(-axis_limit, axis_limit)
+        ax.set_ylim(-axis_limit, axis_limit)
 
     for ax in axes[num_matrices:]:
         ax.set_visible(False)
-    
+
     plt.tight_layout()
-    plt.show()
     plt.show()
     
 # # Function to shuffle the upper and lower triangular parts of a matrix

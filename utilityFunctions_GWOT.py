@@ -71,16 +71,17 @@ def GWD_and_find_best(matrix1, matrix2, epsilons):
     return best_eps, OT_plan, min_gwd, matching_rate
 
 
-def compute_GWOT_for_all_pairs(matrix_pairs, epsilons, save_filename):
+def compute_GWOT_for_all_pairs(matrix_pairs, pair_indices, epsilons, save_filename):
     results = []
 
-    for idx, (matrix1, matrix2) in enumerate(matrix_pairs):
-        print(f"\nProcessing matrix pair {idx + 1}/{len(matrix_pairs)}...")
+    for idx, ((matrix1, matrix2), original_index) in enumerate(zip(matrix_pairs, pair_indices)):
+        print(f"\nProcessing matrix pair {idx + 1}/{len(matrix_pairs)} (original index: {original_index})...")
         start_time = time.time()  # Start timer
 
         try:
             best_eps, OT_plan, min_gwd, matching_rate = GWD_and_find_best(matrix1, matrix2, epsilons)
-            results.append((best_eps, OT_plan, min_gwd, matching_rate))
+            # Store original index with the result
+            results.append((original_index, best_eps, OT_plan, min_gwd, matching_rate))
         except ValueError as e:
             print(f"Skipping pair {idx + 1} due to error: {e}")
 

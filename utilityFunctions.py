@@ -147,6 +147,22 @@ def split_and_average_matrices(matrices):
     
 #     return transformed_matrices
 
+def compute_color_preference_raw_batch(matrix_list):
+    transformed_matrices = []
+
+    value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+    # value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
+    vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
+
+    for matrix in matrix_list:
+        vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
+        transformed_matrix = vectorized_mapping(matrix)
+
+        transformed_matrices.append(transformed_matrix)
+    
+    return transformed_matrices
+
+
 def compute_color_preference_distance_batch(matrix_list):
     """
     Transforms each 2D numpy array in the input list as follows:
@@ -195,7 +211,6 @@ def compute_color_similarity_distance_batch(matrix_list):
     
     return transformed_matrices
 
-# Kana's implementation of plotting heatmaps
 def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label=None, color_labels=None):
     def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
         rect = Rectangle((x, y), width, height, facecolor=bgcolor)
@@ -219,6 +234,11 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
         cbar = fig.colorbar(im, cax=cax)
         cbar.set_label(cbar_label, fontsize=21)
         cbar.ax.tick_params(labelsize=21)
+
+        # Build tick list including 0, and avoid duplicates
+        tick_vals = sorted(set([vmin_val, 0, vmax_val]))
+        cbar.set_ticks(tick_vals)
+        cbar.ax.set_yticklabels([f"{val:.2f}" for val in tick_vals])
 
         # Adjust the height of the color bar
         position = cax.get_position()
@@ -244,7 +264,7 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
     
     plt.tight_layout()
     plt.show()
-
+    
 # def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
 #     num_plots = len(matrices)
 #     fig, axs = plt.subplots(1, num_plots, figsize=(5*num_plots, 5))

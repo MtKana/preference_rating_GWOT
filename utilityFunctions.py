@@ -174,6 +174,8 @@ def compute_color_preference_distance_batch(matrix_list):
     transformed_matrices = []
 
     value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+    # value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
+    
     vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
     
     for matrix in matrix_list:
@@ -211,7 +213,7 @@ def compute_color_similarity_distance_batch(matrix_list):
     
     return transformed_matrices
 
-def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label=None, color_labels=None):
+def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cmap_name, cbar_label=None, color_labels=None):
     def add_colored_label(ax, x, y, bgcolor, width=1, height=1):
         rect = Rectangle((x, y), width, height, facecolor=bgcolor)
         ax.add_patch(rect)  
@@ -219,10 +221,13 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
     num_plots = len(matrices)
     fig, axs = plt.subplots(nrows, ncols, figsize=(5*ncols, 5*nrows))
     axs = np.array(axs).reshape(-1)  # Flatten the axes array
-    
+
     for i, (matrix, title) in enumerate(zip(matrices, titles)):
         ax = axs[i]
-        im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val)
+        
+        # Set the divergent colormap here
+        im = ax.imshow(matrix, aspect='auto', vmin=vmin_val, vmax=vmax_val, cmap = cmap_name)
+        
         ax.set_title(title, fontsize=23)
         ax.set_xlabel("Right", fontsize=23) 
         ax.set_ylabel("Left", fontsize=23)  
@@ -257,13 +262,14 @@ def show_heatmaps(vmin_val, vmax_val, matrices, titles, nrows, ncols, cbar_label
 
             for spine in ax.spines.values():
                 spine.set_visible(False)
-    
+
     # Hide unused subplots if nrows*ncols > num_plots
     for j in range(num_plots, nrows * ncols):
         fig.delaxes(axs[j])
     
     plt.tight_layout()
     plt.show()
+
     
 # def show_heatmaps(vmin_val, vmax_val, matrices, titles, cbar_label=None, color_labels=None):
 #     num_plots = len(matrices)

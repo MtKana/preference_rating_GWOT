@@ -62,13 +62,19 @@ def load_csv_to_matrix(file_path, response_type, colour_index, matrix_size):
 
 def load_csv_to_matrix_batch(folder_path, response_type, colour_index, matrix_size):
     subject_matrices = []
-    files = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.csv')]
+    files = sorted(
+        [os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.csv')]
+    )
+    
+    print("Order of files being loaded:")
+    for f in files:
+        print(f)
+    
     for file in files:
         subject_matrix = load_csv_to_matrix(file, response_type, colour_index, matrix_size)
         subject_matrices.append(subject_matrix)
     
     return subject_matrices
-
 
 def split_and_average_matrices(matrices):
 
@@ -147,11 +153,13 @@ def split_and_average_matrices(matrices):
     
 #     return transformed_matrices
 
-def compute_color_preference_raw_batch(matrix_list):
+def compute_color_preference_raw_batch(matrix_list, value_range_max = 3.5):
     transformed_matrices = []
+    if value_range_max == 3.5:
+        value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+    if value_range_max == 4:
+        value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
 
-    value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
-    # value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
     vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
 
     for matrix in matrix_list:
@@ -163,7 +171,7 @@ def compute_color_preference_raw_batch(matrix_list):
     return transformed_matrices
 
 
-def compute_color_preference_distance_batch(matrix_list):
+def compute_color_preference_distance_batch(matrix_list, value_range_max=3.5):
     """
     Transforms each 2D numpy array in the input list as follows:
     1. Applies the given mapping to transform values.
@@ -172,9 +180,11 @@ def compute_color_preference_distance_batch(matrix_list):
     4. Takes the absolute value of the diagonal elements.
     """
     transformed_matrices = []
-
-    value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
-    # value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
+    
+    if value_range_max == 3.5:
+        value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+    if value_range_max == 4:
+        value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
     
     vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
     
@@ -203,6 +213,7 @@ def compute_color_similarity_distance_batch(matrix_list):
     transformed_matrices = []
 
     value_map = {0: 7, 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1, 7: 0}
+
     vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
     
     for matrix in matrix_list:

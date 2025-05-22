@@ -166,7 +166,7 @@ def compute_color_preference_raw_batch(matrix_list, value_range_max = 3.5):
         vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
         transformed_matrix = vectorized_mapping(matrix)
 
-        transformed_matrices.append(transformed_matrix)
+        transformed_matrices.append(transformed_matrix) 
     
     return transformed_matrices
 
@@ -182,7 +182,8 @@ def compute_color_preference_distance_batch(matrix_list, value_range_max=3.5):
     transformed_matrices = []
     
     if value_range_max == 3.5:
-        value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+        #value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+        value_map = {0: -3.5, 1: -2.5, 2: -1.5, 3: -0.5, 4: 0.5, 5: 1.5, 6: 2.5, 7: 3.5}
     if value_range_max == 4:
         value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
     
@@ -195,12 +196,14 @@ def compute_color_preference_distance_batch(matrix_list, value_range_max=3.5):
         lower_triangle_indices = np.tril_indices_from(transformed_matrix, k=-1)
         transformed_matrix[lower_triangle_indices] *= -1
 
-        for i in range(transformed_matrix.shape[0]):
-            for j in range(i+1, transformed_matrix.shape[1]): 
-                avg_value = (transformed_matrix[i, j] + transformed_matrix[j, i]) / 2
-                transformed_matrix[i, j] = transformed_matrix[j, i] = abs(avg_value)
+        # for i in range(transformed_matrix.shape[0]):
+        #     for j in range(i+1, transformed_matrix.shape[1]): 
+        #         avg_value = (transformed_matrix[i, j] + transformed_matrix[j, i]) / 2
+        #         transformed_matrix[i, j] = transformed_matrix[j, i] = abs(avg_value)
+        # np.fill_diagonal(transformed_matrix, np.abs(np.diagonal(transformed_matrix)))
+        
+        transformed_matrix = np.abs((transformed_matrix + transformed_matrix.transpose()) / 2)
 
-        np.fill_diagonal(transformed_matrix, np.abs(np.diagonal(transformed_matrix)))
         transformed_matrices.append(transformed_matrix)
     
     return transformed_matrices

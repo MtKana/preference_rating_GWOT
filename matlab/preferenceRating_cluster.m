@@ -16,7 +16,7 @@ loaded = load([source_dir source_file]);
 %%
 
 rating_type = 'preference';
-process_type = 'distance'; % 'raw' or 'remap' or 'distance' - 'remap' only for rating_type 'preference'
+process_type = 'remap'; % 'raw' or 'remap' or 'distance' - 'remap' only for rating_type 'preference'
 
 data = loaded.data;
 
@@ -91,6 +91,14 @@ rating_corrs = corr(rating_vecs);
 % Convert correlation to distance
 rating_dists = 1-rating_corrs;
 
+%% Euclidean distances among participants
+
+% Collapse colour dimensions
+rating_vecs = reshape(rating_mats, [length(colours)*length(colours) size(rating_mats, 3)]);
+
+% Distances between participants
+rating_dists = squareform(pdist(rating_vecs', 'euclidean'));
+
 %% Create dendrogram from distances
 
 clusterDistance_method = 'average';
@@ -160,8 +168,12 @@ end
 % pgroups = cluster(tree, 'MaxClust', 2);
 
 % From visual inspection of the histogram
-pgroups = {outperm(1:11), outperm(12:end)}; % preference ratings
-pgroups = {outperm(1:17), outperm(18:end)}; % similarity ratings
+switch rating_type
+	case 'preference'
+		pgroups = {outperm(1:11), outperm(12:end)}; % preference ratings
+	case 'similarity'
+		pgroups = {outperm(1:17), outperm(18:end)}; % similarity ratings
+end
 
 figure;
 set(gcf, 'color', 'w');

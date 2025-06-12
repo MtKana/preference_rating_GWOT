@@ -53,12 +53,25 @@ def load_csv_to_matrix(file_path, response_type, colour_index, matrix_size):
     target_preference = df['response']
 
     matrix = np.zeros((matrix_size, matrix_size))
+    seen_pairs = {}  # Dictionary to store already seen pairs and their values
+
     for c1, c2, tp in zip(colour1, colour2, target_preference):
-        I = colour_index[c1]
+        i = colour_index[c1]
         j = colour_index[c2]
-        matrix[I, j] = tp
+        key = (i, j)
+
+        if key in seen_pairs:
+            # Average the old and new values
+            prev_tp = seen_pairs[key]
+            avg_tp = (prev_tp + tp) / 2
+            matrix[i, j] = avg_tp
+            seen_pairs[key] = avg_tp  # Update with the average
+        else:
+            matrix[i, j] = tp
+            seen_pairs[key] = tp
 
     return matrix.astype(int)
+
 
 def load_csv_to_matrix_batch(folder_path, response_type, colour_index, matrix_size):
     subject_matrices = []
@@ -120,7 +133,52 @@ def split_and_average_matrices(matrices):
 
     return results
 
+def split_and_average_matrices_100(matrices, num_splits=100):
+    """
+    Computes 100 random splits of the matrices into two equal-sized groups,
+    averages each group, and returns a list of tuples of averaged matrices.
 
+    Args:
+    - matrices (list of np.ndarray): List of matrices to be split and averaged.
+    - num_splits (int): Number of random splits to compute.
+
+    Returns:
+    - List[Tuple[np.ndarray, np.ndarray]]: List of tuples containing averaged matrices.
+    """
+    import random
+
+    num_matrices = len(matrices)
+    if num_matrices % 2 != 0:
+        raise ValueError("Number of matrices must be even to split into equal groups.")
+
+    half_size = num_matrices // 2
+    seen_splits = set()
+    results = []
+
+    max_attempts = num_splits * 10
+    attempts = 0
+
+    while len(results) < num_splits and attempts < max_attempts:
+        attempts += 1
+        indices = list(range(num_matrices))
+        random.shuffle(indices)
+        group1_indices = tuple(sorted(indices[:half_size]))
+
+        if group1_indices in seen_splits:
+            continue
+
+        seen_splits.add(group1_indices)
+        group2_indices = [i for i in range(num_matrices) if i not in group1_indices]
+
+        group1 = [matrices[i] for i in group1_indices]
+        group2 = [matrices[i] for i in group2_indices]
+
+        avg1 = np.mean(np.array(group1), axis=0)
+        avg2 = np.mean(np.array(group2), axis=0)
+
+        results.append((avg1, avg2))
+
+    return results
 
 # def compute_color_preference_distance_batch(matrix_list):
 #     """
@@ -471,7 +529,7 @@ def compute_correlations(matrices):
         fmt=".2f", 
         square=True, 
         linewidths=0.5, 
-        annot_kws={"size": 22},  
+        annot_kws={"size": 18},  
         vmin=-1, vmax=1,  
         center=0 
     )

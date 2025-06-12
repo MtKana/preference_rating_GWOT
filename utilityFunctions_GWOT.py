@@ -95,83 +95,83 @@ def compute_GWOT_for_all_pairs(matrix_pairs, pair_indices, epsilons, save_filena
     print(f"Results successfully saved to {save_filename}")
     return results
 
-# def GWD_and_plot(matrix1, matrix2, epsilons):
+def GWD_and_plot(matrix1, matrix2, epsilons):
 
-#     def comp_matching_rate(OT_plan, k, order="maximum"):
-#         # This function computes the matching rate, assuming that in the optimal transportation plan,
-#         # the items in the i-th row and the j-th column are the same (correct mactch) when i = j.
-#         # Thus, the diagonal elements of the optimal transportation plan represent the probabilities
-#         # that the same items (colors) match between the two structures.
+    def comp_matching_rate(OT_plan, k, order="maximum"):
+        # This function computes the matching rate, assuming that in the optimal transportation plan,
+        # the items in the i-th row and the j-th column are the same (correct mactch) when i = j.
+        # Thus, the diagonal elements of the optimal transportation plan represent the probabilities
+        # that the same items (colors) match between the two structures.
 
-#         # Get the diagonal elements
-#         diagonal = np.diag(OT_plan)
-#         # Get the top k values for each row
-#         if order == "maximum":
-#             topk_values = np.partition(OT_plan, -k)[:, -k:]
-#         elif order == "minimum":
-#             topk_values = np.partition(OT_plan, k - 1)[:, :k]
-#         # Count the number of rows where the diagonal is in the top k values and compute the matching rate
-#         count = np.sum([diagonal[i] in topk_values[i] for i in range(OT_plan.shape[0])])
-#         matching_rate = count / OT_plan.shape[0] * 100
-#         return matching_rate
+        # Get the diagonal elements
+        diagonal = np.diag(OT_plan)
+        # Get the top k values for each row
+        if order == "maximum":
+            topk_values = np.partition(OT_plan, -k)[:, -k:]
+        elif order == "minimum":
+            topk_values = np.partition(OT_plan, k - 1)[:, :k]
+        # Count the number of rows where the diagonal is in the top k values and compute the matching rate
+        count = np.sum([diagonal[i] in topk_values[i] for i in range(OT_plan.shape[0])])
+        matching_rate = count / OT_plan.shape[0] * 100
+        return matching_rate
 
-#     OT_plans = []
-#     gwds = []
-#     matching_rates = []
-#     valid_epsilons = []
+    OT_plans = []
+    gwds = []
+    matching_rates = []
+    valid_epsilons = []
 
-#     for epsilon in epsilons:
-#         OT, gw_log = ot.gromov.entropic_gromov_wasserstein(
-#             C1=matrix1, C2=matrix2, epsilon=epsilon, loss_fun="square_loss", log=True
-#         )  # optimization
+    for epsilon in epsilons:
+        OT, gw_log = ot.gromov.entropic_gromov_wasserstein(
+            C1=matrix1, C2=matrix2, epsilon=epsilon, loss_fun="square_loss", log=True
+        )  # optimization
         
-#         # Check if the transportation matrix is all zeros
-#         if not OT.any():
-#             print(f"Skipping epsilon={epsilon} because it results in a zero transportation matrix.")
-#             continue
+        # Check if the transportation matrix is all zeros
+        if not OT.any():
+            print(f"Skipping epsilon={epsilon} because it results in a zero transportation matrix.")
+            continue
 
-#         gwd = gw_log['gw_dist']
-#         matching_rate = comp_matching_rate(OT, k=1)  # calculate the top-1 matching rate
+        gwd = gw_log['gw_dist']
+        matching_rate = comp_matching_rate(OT, k=1)  # calculate the top-1 matching rate
 
-#         OT_plans.append(OT)
-#         gwds.append(gwd)
-#         matching_rates.append(matching_rate)
-#         valid_epsilons.append(epsilon)
+        OT_plans.append(OT)
+        gwds.append(gwd)
+        matching_rates.append(matching_rate)
+        valid_epsilons.append(epsilon)
 
-#     if not gwds:
-#         raise ValueError("No valid epsilon values resulted in a non-zero transportation matrix.")
+    if not gwds:
+        raise ValueError("No valid epsilon values resulted in a non-zero transportation matrix.")
 
-#     # Identify the best epsilon (corresponding to the minimum GWD)
-#     min_gwd = min(gwds)
-#     best_eps_idx = gwds.index(min_gwd)
-#     best_eps = valid_epsilons[best_eps_idx]
-#     OT_plan = OT_plans[best_eps_idx]
-#     matching_rate = matching_rates[best_eps_idx]
+    # Identify the best epsilon (corresponding to the minimum GWD)
+    min_gwd = min(gwds)
+    best_eps_idx = gwds.index(min_gwd)
+    best_eps = valid_epsilons[best_eps_idx]
+    OT_plan = OT_plans[best_eps_idx]
+    matching_rate = matching_rates[best_eps_idx]
 
-#     # Print the best epsilon and its corresponding minimum GWD
-#     print(f"Best epsilon: {best_eps}, Minimum GWD: {min_gwd:.3f}")
+    # Print the best epsilon and its corresponding minimum GWD
+    print(f"Best epsilon: {best_eps}, Minimum GWD: {min_gwd:.3f}")
 
-#     # Plot GWD vs Epsilon
-#     plt.scatter(valid_epsilons, gwds, c=matching_rates, cmap="viridis")
-#     plt.xlabel("epsilon")
-#     plt.ylabel("GWD")
-#     plt.xscale('log')
-#     plt.grid(True, which='both')
-#     cbar = plt.colorbar()
-#     cbar.set_label(label='Matching Rate (%)')
-#     plt.scatter([best_eps], [min_gwd], color='red', marker='o', label=f'Best ε={best_eps}')  # Highlight best epsilon
-#     plt.legend()
-#     plt.show()
+    # Plot GWD vs Epsilon
+    plt.scatter(valid_epsilons, gwds, c=matching_rates, cmap="viridis")
+    plt.xlabel("epsilon")
+    plt.ylabel("GWD")
+    plt.xscale('log')
+    plt.grid(True, which='both')
+    cbar = plt.colorbar()
+    cbar.set_label(label='Matching Rate (%)')
+    plt.scatter([best_eps], [min_gwd], color='red', marker='o', label=f'Best ε={best_eps}')  # Highlight best epsilon
+    plt.legend()
+    plt.show()
 
-#     # Display the optimal transport plan
-#     show_heatmaps(
-#         0, 0.1,
-#         matrices=[OT_plan],
-#         titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n Best ε={best_eps} \n Matching rate: {matching_rate:.1f}%'],
-#         nrows=1, ncols=1, cbar_label=None, color_labels=None
-#     )
+    # Display the optimal transport plan
+    show_heatmaps(
+        0, 0.1,
+        matrices=[OT_plan],
+        titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n Best ε={best_eps} \n Matching rate: {matching_rate:.1f}%'],
+        nrows=1, ncols=1, cbar_label=None, color_labels=None, cmap_name='viridis'
+    )
 
-#     return OT_plan, gwds, matching_rates
+    return OT_plan, gwds, matching_rates
 
 # def compute_GWOT_for_all_pairs(matrix_pairs, epsilons):
 #     results = []

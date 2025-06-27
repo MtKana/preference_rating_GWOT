@@ -171,7 +171,7 @@ def GWD_and_plot(matrix1, matrix2, epsilons):
         nrows=1, ncols=1, cbar_label=None, color_labels=None, cmap_name='viridis'
     )
 
-    return OT_plan, gwds, matching_rates
+    return OT_plan, gwds, matching_rates, min_gwd
 
 # def compute_GWOT_for_all_pairs(matrix_pairs, epsilons):
 #     results = []

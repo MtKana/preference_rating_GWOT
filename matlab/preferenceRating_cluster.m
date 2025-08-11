@@ -92,13 +92,13 @@ rating_corrs = corr(rating_vecs);
 rating_dists = 1-rating_corrs;
 
 %% Euclidean distances among participants
-
+%{
 % Collapse colour dimensions
 rating_vecs = reshape(rating_mats, [length(colours)*length(colours) size(rating_mats, 3)]);
 
 % Distances between participants
 rating_dists = squareform(pdist(rating_vecs', 'euclidean'));
-
+%}
 %% Create dendrogram from distances
 
 clusterDistance_method = 'average';
@@ -143,7 +143,7 @@ axis square;
 figure;
 set(gcf, 'color', 'w');
 
-if strcmp(process_type, 'remap')
+if strcmp(rating_type, 'preference') & (strcmp(process_type, 'raw') | strcmp(process_type, 'remap'))
 	colormap(cmap);
 else
 	colormap viridis
@@ -178,7 +178,7 @@ end
 figure;
 set(gcf, 'color', 'w');
 
-if strcmp(process_type, 'remap')
+if strcmp(rating_type, 'preference') & (strcmp(process_type, 'raw') | strcmp(process_type, 'remap'))
 	colormap(cmap);
 else
 	colormap viridis

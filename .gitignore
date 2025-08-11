@@ -1,2 +1,6 @@
-raw_data/*
 __pycache__/*
+
+# Ignore data files
+raw_data/*
+**/*.mat
+**/*.csv

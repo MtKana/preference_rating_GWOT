@@ -1,6 +1,9 @@
 function [violation_mat, b_thresholds, valid_mat] = transitivityViolations(rating_mats)
 %transitivityViolations
-% transitivity: if x <= y <= z, then x <= z
+% transitivity: if x <= y  and y <= z, then x <= z
+% Supposed to be used with ratings that are antisymmetric
+%	(i.e. (a,b) and (b,a) have equal magnitude)
+%	(would still "work" if not antisymmetric though)
 %
 % Inputs:
 %	rating_mats = stim x stim x participants matrix
@@ -10,6 +13,56 @@ function [violation_mat, b_thresholds, valid_mat] = transitivityViolations(ratin
 %	b_thresholds = vector of thresholds used for determining preference
 %	valid_mat = stim x stim x stim x participants x thresholds matrix
 %		Holds 1 where the first two transitivity conditions are satisfied
+
+% Check first two conditions, then the third condition
+
+% set of possible thresholds
+b_thresholds = unique(abs(rating_mats(:)));
+
+% Set of colour indexes
+colours = (1:size(rating_mats, 1));
+
+% x * y * z * participants * thresholds
+violation_mat = zeros(numel(colours), numel(colours), numel(colours), size(rating_mats, 3), numel(b_thresholds));
+valid_mat = zeros(size(violation_mat)); % for counting where the first two conditions are true
+
+bmats = nan([size(rating_mats, 1) size(rating_mats, 2) size(rating_mats, 3) numel(b_thresholds)]);
+for b = 1 : numel(b_thresholds)
+	b_thresh = b_thresholds(b);
+	
+	% Binarise ratings matrices
+	% If rating is within range (-thresh, thresh), then consider it as no
+	% preference
+	bmats(:, :, :, b) = (rating_mats <= -b_thresh) | (rating_mats >= b_thresh);
+	
+	for p = 1 : size(rating_mats, 3)
+		for x = colours
+			for y = colours(colours~=x)
+				for z = colours(colours~=x & colours~=y)
+					
+					if bmats(x, y, p, b) == 1 && bmats(y, z, p, b) == 1
+						% Then the first two conditions are satisfied
+						
+						valid_mat(x, y, z, p, b) = 1;
+						
+						if bmats(x, z, p, b) ~= 1
+							% Then there is a violation
+							
+							violation_mat(x, y, z, p, b) = 1;
+							
+						end
+						
+					end
+					
+				end
+			end
+		end
+	end
+	
+end
+
+
+end
 
 % transitivity: if x <= y <= z, then x <= z
 %
@@ -81,8 +134,9 @@ for p = 1 : size(rating_mats, 3) % for each participant
 end
 %}
 
-% Do it the "long" way
-%	(start from the first condition instead of the last)
+%{
+% Check first two conditions, then the third condition
+% Consider preference to the left colour if rating is below some threshold
 
 b_thresholds = unique(rating_mats(:));
 
@@ -125,7 +179,4 @@ for b = 1 : numel(b_thresholds)
 	end
 	
 end
-
-
-end
-
+%}

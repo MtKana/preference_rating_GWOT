@@ -7,7 +7,9 @@ function [distances] = rating2dist(ratings, rating_type, process_type)
 %	rating_type = string; 'similarity' or 'preference'
 %	process_type = string; for rating_type 'preference'
 %		'remap': remap values to new scale (with equal intervals)
-%		'distance': 'remap' and then convert to distance
+%		'antisym': 'remap' then antisymmetrise
+%		'distance': 'remap' then 'antisym' then absolute
+%		'distOld': 'remap' and then convert to distance (old method)
 %
 % Outputs:
 %	distances = matrix, same dimensions as ratings
@@ -16,37 +18,48 @@ function [distances] = rating2dist(ratings, rating_type, process_type)
 max_rating_raw = 7;
 max_pref_dist = max_rating_raw/2;
 
-if strcmp(rating_type, 'similarity')
+switch rating_type
 	
-	distances = max_rating_raw - ratings;
-	
-elseif strcmp(rating_type, 'preference')
-	
-	% Convert 0 to 7 -> -3.5 to 3.5
-	distances = ratings - max_pref_dist;
-	
-	if strcmp(process_type, 'distance')
+	case 'similarity'
 		
-		% Flip the sign of the upper (or lower) triangle
-		upper = find(triu(ones(size(ratings, 1)), 1));
-		for p = 1 : size(distances, 3)
-			tmp = distances(:, :, p);
-			tmp(upper) = tmp(upper) * -1;
-			distances(:, :, p) = tmp;
+		distances = max_rating_raw - ratings;
+		
+	case 'preference'
+		
+		% remap 0 to 7 -> -3.5 to 3.5
+		distances = ratings - max_pref_dist;
+		
+		switch process_type
+			
+			case 'antisym'
+				
+				distances = antisymmetrise(distances);
+				
+			case 'distance'
+				
+				distances = abs(antisymmetrise(distances));
+				
+			case 'distOld'
+				
+				% Flip the sign of the upper (or lower) triangle
+				upper = find(triu(ones(size(ratings, 1)), 1));
+				for p = 1 : size(distances, 3)
+					tmp = distances(:, :, p);
+					tmp(upper) = tmp(upper) * -1;
+					distances(:, :, p) = tmp;
+				end
+				
+				% Average the upper and lower triangles
+				for p = 1 : size(distances, 3)
+					tmp = distances(:, :, p);
+					tmp = (tmp + tmp') ./2;
+					distances(:, :, p) = tmp;
+				end
+				
+				% Take the absolute value
+				distances = abs(distances);
+			
 		end
-		
-		% Average the upper and lower triangles
-		for p = 1 : size(distances, 3)
-			tmp = distances(:, :, p);
-			tmp = (tmp + tmp') ./2;
-			distances(:, :, p) = tmp;
-		end
-		
-		% Take the absolute value
-		distances = abs(distances);
-		
-	end
-	
 end
 
 end

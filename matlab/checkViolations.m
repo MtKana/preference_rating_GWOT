@@ -36,8 +36,8 @@ loaded = load([source_dir source_file]);
 % 'similarity' or 'preference'
 rating_type = 'preference';
 
-% 'raw' or 'remap' or 'distance' - 'remap' only for rating_type 'preference'
-process_type = 'remap';
+% 'raw' or 'remap' or 'antisym' or 'distance' - 'remap' only for rating_type 'preference'
+process_type = 'distance';
 
 % '' or 'preference_ordered'
 object_order = '';
@@ -55,6 +55,8 @@ data = loaded.data;
 rating_mats = getRatings(data, rating_type, colour_positions);
 
 %% Convert to distances
+
+relation_string = '';
 
 switch rating_type
 	case 'similarity'
@@ -81,10 +83,18 @@ switch rating_type
 				rating_mats = rating2dist(rating_mats, rating_type, 'remap');
 				clim = [-3.5 3.5];
 				relation_string = 'pref';
+			case 'antisym'
+				rating_mats = rating2dist(rating_mats, rating_type, 'antisym');
+				clim = [-3.5 3.5];
+				relation_string = 'apref';
 			case 'distance'
 				rating_mats = rating2dist(rating_mats, rating_type, 'distance');
 				clim = [0 3.5];
-				relation_string = 'prefdis';
+				relation_string = 'prefdist';
+			case 'distOld'
+				rating_mats = rating2dist(rating_mats, rating_type, 'distance_old');
+				clim = [0 3.5];
+				relation_string = 'prefdistOld';
 		end
 end
 
@@ -158,10 +168,11 @@ figure;
 set(gcf, 'Position', get(0, 'Screensize'));
 set(gcf, 'Color', 'w');
 
-if strcmp(rating_type, 'preference') & (strcmp(process_type, 'raw') | strcmp(process_type, 'remap'))
+if strcmp(rating_type, 'preference') & any(strcmp(process_type, {'raw', 'remap', 'antisym'}))
 	colormap(cmap);
 else
 	colormap viridis
+	colormap(cmap(51:end, :));
 end
 
 for p = 1 : size(rating_mats, 3)
@@ -179,100 +190,31 @@ for p = 1 : size(rating_mats, 3)
 	
 	switch participant_mean
 		case 0
-			title([rating_type newline 'subject' num2str(p)], 'interpreter', 'none');
+			title([relation_string newline 'subject' num2str(p)], 'interpreter', 'none');
 		case 2
-			title(group_labels{p});
+			title([relation_string newline group_labels{p}]);
 	end
-	colourTickLabels(ax, cbar, rgb, 0);
+	colourTickLabels(ax, cbar, colours_rgb, 0);
 end
 
-%% Check violations of transitivity
-% Check using distance from middle rating (0)
-% Thresholds
-%	0
-%	-0.5 to +0.5
-%	-1.5 to +1.5
-%	-2.5 to +2.5
-%	-3.5 to +3.5
-%
-% Only consider a preference if a participant rated outside the
-% thresholded range
-%	If the rating is within the range, then consider it as no preference
-%	for either a or b
-%		Consider it as no preference? i.e. a=b?
-%		Consider it as left not preferred? i.e. !(a<=b)?
-%	Is this any different from just single threshold (instead of range)?
+%% Check violations of antisymmetry
+
+as_viols = asymmetryViolations(rating_mats, 0);
+
+% Plot
+mat_plot(as_viols, rating_type, process_type, relation_string, clim, participant_mean, colours_rgb);
 
 %% Check violations of transitivity
-% transitivity: if x <= y <= z, then x <= z
-%
-% Negative ratings correspond to preferring the left colour
-%
-% If participants prefer a over b, and b over c,
-%	then they should prefer a over c
-%
-% First, binarise ratings with some threshold
-%	Because negative ratings correspond to preferring the left colour:
-%		Make values below the threshold 1 (left colour preferred)
-%		Make values above the threshold 0 (right colour preferred)
-%	So, pref(a, b) = 1 means:
-%		a (on the left) has a lower rating value than b (on the right)
-%
-% For each x and z, check x <= z
-%	If false, then check for each y:
-%		x <= y
-%		and
-%		y <= z
-%	If both are true, then record a violation
-%	If one or both are false, then there is no violation
-%
-% What to consider as "percentage violations"?
-%	nViolations / A - out of every combination of x,y,z
-%		A = 12*11*10 combinations
-%	nViolations / B - out of every case where the first two conditions are true
-%		B = count of cases where x <= y and y <= z
 
-b_thresh = 0;
+[violation_mat, b_thresholds, bmats, valid_mat] = transitivityViolations(rating_mats);
 
-% Binarise ratings matrices
-bmat = rating_mats <= b_thresh;
+%% Check violations of triangle inequality
 
-violation_mat = zeros(size(rating_mats));
 
-for p = 1 : size(rating_mats, 3) % for each participant
-	
-	for x = 1 : size(rating_mats, 1)
-		for z = 1 : size(rating_mats, 2)
-			
-			% skip if x and y are the same (no transitivity to test for)
-			if x ~= z
-				
-				% Check if last condition (x <= z) is violated (false)
-				if bmat(x, z, p) ~= 1
-					
-					% Check preceding conditions for each other colour are
-					% true
-					for y = 1 : size(rating_mats, 1)
-						if (y ~= x) && (y ~= z)
-							
-							% Assumes boolean matrix (not raw ratings)
-							violation_mat(x, z, p) =...
-								violation_mat(x, z, p) +...
-								(bmat(x, y, p) & bmat(y, z, p));
-							
-						end
-					end
-					
-				end
-				
-			end
-			
-		end
-	end
-	
-end
 
 %% Check violation of transitivity
+
+%{
 % Do it the "long" way
 %	(start from the first condition instead of the last)
 
@@ -317,6 +259,7 @@ for b = 1 : numel(b_thresholds)
 	end
 	
 end
+%}
 
 %%
 % Plot total violation counts at each threshold
@@ -371,7 +314,7 @@ switch participant_mean
 end
 
 %% 
-% Plot (a,b), (b,c), (a,c) satisfaction matrices
+% Select participant and threshold to plot for
 
 switch rating_type
 	case 'similarity'
@@ -387,7 +330,7 @@ switch rating_type
 		end
 end
 
-p = 1;
+p = 3;
 
 p_label = ['participant ' num2str(p)];
 
@@ -395,6 +338,9 @@ if participant_mean == 1
 	p = 1;
 	p_label = ['averaged ratings'];
 end
+
+%% 
+% Plot (a,b), (b,c), (a,c) satisfaction matrices
 
 figure;
 set(gcf, 'Color', 'w');
@@ -414,7 +360,7 @@ switch rating_type
 	case 'preference'
 		switch process_type
 			case 'raw'
-			case 'remap'
+			case {'remap', 'antisym'}
 				ylabel(cbar, 'pref rating');
 				colormap(gca, cmap);
 			case 'distance'
@@ -652,6 +598,53 @@ set(gca, 'Visible', 'off');
 legend([cdf_line actual_line, thresh_line], {'cdf', 'actual', '5%'}, 'Location', 'best');
 
 %title(['averaged ratings (POP)' newline 'thresh=' num2str(shuffled_thresholds(b))]);
+
+%%
+
+function [] = mat_plot(rating_mats, rating_type, process_type, relation_string, clim, participant_mean, colours_rgb)
+% Plot rating matrix for each participant
+%
+% Inputs:
+%	rating_mats: stim x stim x participants
+
+figure;
+%set(gcf, 'Position', [0 0 1920 1080]);
+set(gcf, 'Position', get(0, 'Screensize'));
+set(gcf, 'Color', 'w');
+
+if strcmp(rating_type, 'preference') & (strcmp(process_type, 'raw') | strcmp(process_type, 'remap'))
+	cmap = flipud(cbrewer('div', 'RdBu', 100));
+	cmap(cmap < 0) = 0; % for some reason cbrewer is giving negative values...?
+	colormap(cmap);
+else
+	colormap viridis
+end
+
+for p = 1 : size(rating_mats, 3)
+	switch participant_mean
+		case 0
+			subplot(4, 5, p);
+		case 2
+			subplot(1, 2, p);
+	end
+	imagesc(rating_mats(:, :, p), clim);
+	ax = gca();
+	cbar = colorbar;
+	set(cbar, 'YTick', (clim(1) : clim(2)/2 : clim(2)));
+	axis square
+	
+	switch participant_mean
+		case 0
+			title([relation_string newline 'subject' num2str(p)], 'interpreter', 'none');
+		case 2
+			title([relation_string newline group_labels{p}]);
+	end
+	
+	colourTickLabels(ax, cbar, colours_rgb, 0);
+	
+end
+
+end
 
 %%
 

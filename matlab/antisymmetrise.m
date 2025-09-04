@@ -30,7 +30,9 @@ for p = 1 : size(rating_mats, 3)
 				%	based on the other one
 				if ab == 0
 					ab_new = ab_new * (-1*sign(ba));
+					ba_new = ba_new * sign(ba);
 				elseif ba == 0
+					ab_new = ab_new * sign(ab);
 					ba_new = ba_new * (-1*sign(ab));
 				else % neither were 0
 					% Give their original signs

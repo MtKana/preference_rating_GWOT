@@ -24,6 +24,13 @@ switch rating_type
 		
 		distances = max_rating_raw - ratings;
 		
+		% Set diagonal to 0 (for distance)
+		tmp = logical(repmat(eye(size(ratings, 1)), [1 1 size(ratings, 3)]));
+		distances(tmp) = 0;
+		
+		% Symmetrise by averaging top right and bot left triangles together
+		distances = (distances + permute(distances, [2 1 3])) / 2;
+		
 	case 'preference'
 		
 		% remap 0 to 7 -> -3.5 to 3.5

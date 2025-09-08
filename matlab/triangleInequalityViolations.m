@@ -6,10 +6,7 @@ function [violation_mat] = triangleInequalityViolations(rating_mats)
 %	rating_mats = stim x stim x participants matrix
 % Outputs:
 %	violation_mat = stim x stim x stim x participants x thresholds matrix
-%		Holds 1 where transitivity was violated
-%	b_thresholds = vector of thresholds used for determining preference
-%	valid_mat = stim x stim x stim x participants x thresholds matrix
-%		Holds 1 where the first two transitivity conditions are satisfied
+%		Holds 1 where inequality was violated
 
 % Set of colour indexes
 colours = (1:size(rating_mats, 1));
@@ -26,7 +23,7 @@ for p = 1 : size(rating_mats, 3)
 				
 				xz = rating_mats(x, z, p);
 				
-				if xz > xyz % if xz is not less than xyz
+				if xz > xyz % if xz is not less than or equal than xyz
 					violation_mat(x, y, z, p) = 1;
 				end
 				

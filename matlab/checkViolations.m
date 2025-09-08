@@ -36,15 +36,15 @@ loaded = load([source_dir source_file]);
 % 'similarity' or 'preference'
 rating_type = 'preference';
 
-% 'raw' or 'remap' or 'antisym' or 'distance' - 'remap' only for rating_type 'preference'
+% 'raw' or 'remap' or 'antisym' or 'distance' - 'remap', 'antisym' only for rating_type 'preference'
 process_type = 'distance';
 
 % '' or 'preference_ordered'
-object_order = '';
+object_order = 'preference_ordered';
 
 % 0 = no average; 1 = average ratings across participants; 2 = average within participant clusters
 % Note - check hardcoded clusters in the code in the following sections
-participant_mean = 0;
+participant_mean = 1;
 
 data = loaded.data;
 
@@ -191,11 +191,42 @@ for p = 1 : size(rating_mats, 3)
 	switch participant_mean
 		case 0
 			title([relation_string newline 'subject' num2str(p)], 'interpreter', 'none');
+		case 1
+			title([relation_string newline 'N=19'], 'interpreter', 'none');
 		case 2
 			title([relation_string newline group_labels{p}]);
 	end
 	colourTickLabels(ax, cbar, colours_rgb, 0);
 end
+
+%% Show MDS
+
+figure;
+set(gcf, 'Color', 'w');
+for p = 1 : size(rating_mats, 3)
+	switch participant_mean
+		case 0
+			subplot(4, 5, p);
+		case 2
+			subplot(1, 2, p);
+	end
+	
+	Y = mdscale(rating_mats(:, :, p), 2);
+	
+	scatter(Y(:, 1), Y(:, 2), 100, colours_rgb, 'filled', 'MarkerFaceAlpha', 0.8);
+	
+	switch participant_mean
+		case 0
+			title([relation_string newline 'subject' num2str(p)], 'interpreter', 'none');
+		case 2
+			title([relation_string newline group_labels{p}]);
+	end
+	
+	set(gca, 'XTick', [], 'YTick', []);
+	axis square
+	
+end
+	
 
 %% Check violations of antisymmetry
 
@@ -210,7 +241,7 @@ mat_plot(as_viols, rating_type, process_type, relation_string, clim, participant
 
 %% Check violations of triangle inequality
 
-
+ti_viols = triangleInequalityViolations(rating_mats);
 
 %% Check violation of transitivity
 
@@ -280,7 +311,7 @@ switch participant_mean
 		
 		ylabel(cbar, 'violation count');
 		set(gca, 'XTick', (1:numel(b_thresholds)), 'XTickLabel', b_thresholds);
-		xlabel([relation_string '(a,b) \leq x']);
+		xlabel(['-x \leq ' relation_string '(a,b) \geq x']);
 		ylabel('participant');
 		title('Violation counts per participant');
 		
@@ -290,7 +321,7 @@ switch participant_mean
 		axis tight
 		
 		set(gca, 'XTick', (1:numel(b_thresholds)), 'XTickLabel', b_thresholds);
-		xlabel([relation_string '(a,b) \leq x']);
+		xlabel(['-x \leq ' relation_string '(a,b) \leq x']);
 		ylabel('violation count')
 		title(['Mean across N=' num2str(size(violation_counts, 1))]);
 		
@@ -303,7 +334,7 @@ switch participant_mean
 		tmp2 = linspace(0, max(b_thresholds), 4); tmp2 = tmp2(2:end);
 		set(gca, 'XTick', [tmp1 tmp2]);
 		
-		xlabel([relation_string '(a,b) \leq x']);
+		xlabel([relation_string '(a,b) \geq x']);
 		ylabel('violation count')
 		title(['Violation count (averaged ratings)']);
 		
@@ -324,13 +355,14 @@ switch rating_type
 		end
 	case 'preference'
 		switch process_type
-			case 'remap'
+			case {'remap', 'antisym', 'distance'}
 				b = find(b_thresholds==0);
 				b = find(b_thresholds==min(abs(b_thresholds)));
+				b = find(b_thresholds==max(abs(b_thresholds)));
 		end
 end
 
-p = 3;
+p = 1;
 
 p_label = ['participant ' num2str(p)];
 
@@ -339,8 +371,54 @@ if participant_mean == 1
 	p_label = ['averaged ratings'];
 end
 
+%% Plot threshold masks
+
+figure;
+set(gcf, 'Color', 'w');
+
+% Show preference ratings
+subplot(1, 4, 1);
+imagesc(rating_mats(:, :, p));
+cbar = colorbar;
+
+switch rating_type
+	case 'similarity'
+		switch process_type
+			case 'raw'
+			case 'distance'
+				ylabel(cbar, 'dissimilarity')
+		end
+	case 'preference'
+		switch process_type
+			case 'raw'
+			case {'remap', 'antisym'}
+				ylabel(cbar, 'pref rating');
+				colormap(gca, cmap);
+			case 'distance'
+		end
+end
+
+title([p_label]);
+xlabel('right colour');
+ylabel('left colour');
+
+for bt = 1 : size(bmats, 4)
+	subplot(4, 4, bt);
+	%imagesc(bmats(:, :, p, bt), [0 1]); % Plot mask
+	imagesc(bmats(:, :, p, bt) .* rating_mats(:, :, p), clim); % Plot mask * ratings
+	cbar = colorbar;
+	title([num2str(-1*b_thresholds(bt)) ' \leq ' relation_string '(a,b) \geq ' num2str(b_thresholds(bt))]);
+	xlabel('b');
+	ylabel('a');
+	
+	colormap(cmap);
+	
+	axis square
+end
+
 %% 
-% Plot (a,b), (b,c), (a,c) satisfaction matrices
+%{
+% Plot (a,b), (b,c), (a,c) threshold masks
 
 figure;
 set(gcf, 'Color', 'w');
@@ -394,6 +472,7 @@ cbar = colorbar;
 title([relation_string '(a,c) \leq ' num2str(b_thresholds(b))]);
 xlabel('c');
 ylabel('a');
+%}
 
 %%
 % Plot (a,b), (b,c), (a,c) valid count
@@ -437,29 +516,124 @@ set(gcf, 'color', 'w');
 % Show (a,b)
 subplot(1, 3, 1);
 imagesc(squeeze(sum(violation_mat(:, :, :, p, b), 3)));
+ax = gca();
 cbar = colorbar;
 ylabel(cbar, ['violations at thresh=' num2str(b_thresholds(b))])
 xlabel('b');
 ylabel('a');
 title([p_label newline 'violation count']);
+axis square
+colourTickLabels(ax, cbar, colours_rgb, 0);
 
 % Show (b,c)
 subplot(1, 3, 2);
 imagesc(squeeze(sum(violation_mat(:, :, :, p, b), 1)));
+ax = gca();
 cbar = colorbar;
 ylabel(cbar, ['violations at thresh=' num2str(b_thresholds(b))])
 xlabel('c');
 ylabel('b');
 title([p_label newline 'violation count']);
+axis square
+colourTickLabels(ax, cbar, colours_rgb, 0);
 
 % Show (a,c)
 subplot(1, 3, 3);
 imagesc(squeeze(sum(violation_mat(:, :, :, p, b), 2)));
+ax = gca();
 cbar = colorbar;
 ylabel(cbar, ['violations at thresh=' num2str(b_thresholds(b))])
 xlabel('c');
 ylabel('a');
 title([p_label newline 'violation count']);
+axis square
+colourTickLabels(ax, cbar, colours_rgb, 0);
+
+%% Illustrate specific a,b,c combination
+% Fix (a,b)
+% Show pref(a,b) (constant)
+% Show pref(b,c) (as function of c)
+% Show pref(a,x) (as function of c)
+% Highlight relevant rows in rating matrix
+
+% For participant 1, preference ratings
+p = 1;
+a = 4;
+b = 6;
+
+% For participant 1, preference ratings, highest threshold
+p = 1;
+a = 11;
+b = 2;
+
+%{
+% For participant 1, similarity distances
+p = 1;
+a = 4;
+b = 6;
+%}
+
+% For participant mean, preference ordered preference ratings
+%a = 11;
+%b = 9;
+
+
+figure;
+set(gcf, 'Color', 'w');
+
+% Show ratings matrix and higlight relevant cells
+% Note - imagesc() and rectangle() x,y are flipped (x corresponds to rows
+%	in imagesc())
+imagesc(rating_mats(:, :, p) .* bmats(:, :, p, end), clim);
+ax = gca();
+set(gca, 'TickDir', 'out');
+axis square
+
+cbar = colorbar;
+set(cbar, 'YTick', (clim(1) : clim(2)/2 : clim(2)));
+
+title([p_label]);
+xlabel('right colour');
+ylabel('left colour');
+
+
+if strcmp(rating_type, 'preference')
+	colormap(cmap);
+else
+	colormap viridis
+end
+
+switch rating_type
+	case 'similarity'
+		switch process_type
+			case 'raw'
+			case 'distance'
+				ylabel(cbar, 'dissimilarity')
+		end
+	case 'preference'
+		switch process_type
+			case 'raw'
+			case 'remap'
+				ylabel(cbar, 'pref rating');
+				colormap(gca, cmap);
+			case 'distance'
+		end
+end
+
+hold on
+
+% Highlight (b,c) for all c
+rectangle('Position', [0.5, b-0.5, size(rating_mats,2), 1], ...
+          'EdgeColor', 'm', 'LineWidth', 5, 'LineStyle', '-');
+% Highlight (a,c) for all c
+rectangle('Position', [0.5, a-0.5, size(rating_mats,2), 1], ...
+          'EdgeColor', 'g', 'LineWidth', 5, 'LineStyle', '-');
+% Highlight (a,b)
+rectangle('Position', [b-0.5, a-0.5, 1, 1], ...
+          'EdgeColor', 'r', 'LineWidth', 4);
+
+colourTickLabels(ax, cbar, colours_rgb, 1);
+
 
 %%
 % Plot percentage of violations at each threshold
@@ -484,7 +658,7 @@ if participant_mean == 0
 	
 	ylabel(cbar, 'violation portion');
 	set(gca, 'XTick', (1:numel(b_thresholds)), 'XTickLabel', b_thresholds);
-	xlabel([relation_string '(a,b) \leq x']);
+	xlabel(['-x \leq ' relation_string '(a,b) \geq x']);
 	ylabel('participant');
 	title('Violation portion per participant');
 	
@@ -494,8 +668,8 @@ if participant_mean == 0
 	axis tight
 	
 	set(gca, 'XTick', (1:numel(b_thresholds)), 'XTickLabel', b_thresholds);
-	xlabel([relation_string '(a,b) \leq x']);
-	ylabel('violation count')
+	xlabel(['-x \leq ' relation_string '(a,b) \geq x']);
+	ylabel('violation portion')
 	title(['Mean across N=' num2str(size(violation_perc, 1))]);
 	
 elseif participant_mean == 1
@@ -507,7 +681,7 @@ elseif participant_mean == 1
 	tmp2 = linspace(0, max(b_thresholds), 4); tmp2 = tmp2(2:end);
 	set(gca, 'XTick', [tmp1 tmp2]);
 	
-	xlabel([relation_string '(a,b) \leq x']);
+	xlabel(['-x \leq ' relation_string '(a,b) \geq x']);
 	ylabel('violation portion')
 	title(['Violation portion (averaged ratings)']);
 	
@@ -699,7 +873,9 @@ for p = 1 : size(rating_mats, 3)
 		end
 	end
 end
+%}
 
+%{
 %% Illustrate specific a,b,c combination
 % Fix (a,b)
 % Show pref(a,b) (constant)

@@ -7,6 +7,8 @@ function [ax2, cbar_x, cbar_y] = colourTickLabels(ax1, cb1, colours, transform)
 %	ax1 = axis handle
 %	cb1 = colorbar handle for ax1
 %	colours = Nx3 matrix, specifies RGB colours
+%	transform = 0; 1 to reduce changing of figure size to accommodate
+%		the new colorbars
 % Outputs:
 %	ax2 = axis handle for the dummy axis used for the x ticks
 

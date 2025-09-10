@@ -54,6 +54,10 @@ data = loaded.data;
 
 rating_mats = getRatings(data, rating_type, colour_positions);
 
+%% Shuffle ratings
+
+rating_mats = shuffleRatings();
+
 %% Convert to distances
 
 relation_string = '';
@@ -226,7 +230,7 @@ for p = 1 : size(rating_mats, 3)
 	axis square
 	
 end
-	
+
 
 %% Check violations of antisymmetry
 

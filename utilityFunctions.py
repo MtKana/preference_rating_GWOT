@@ -70,7 +70,7 @@ def load_csv_to_matrix(file_path, response_type, colour_index, matrix_size):
             matrix[i, j] = tp
             seen_pairs[key] = tp
 
-    return matrix.astype(int)
+    return matrix
 
 
 def load_csv_to_matrix_batch(folder_path, response_type, colour_index, matrix_size):
@@ -265,6 +265,99 @@ def compute_color_preference_distance_batch(matrix_list, value_range_max=3.5):
         transformed_matrices.append(transformed_matrix)
     
     return transformed_matrices
+
+def compute_color_preference_distance_batch_ver2(matrix_list, value_range_max=3.5):
+    """
+    Transforms each 2D numpy array in the input list as follows:
+    1. Applies the given mapping to transform values.
+    2. Replaces the lower triangular values (below the diagonal) with their negative values.
+    3. Computes the average of values across the diagonal and replaces them with their absolute value.
+    4. Sets the diagonal elements to zero.
+    """
+    transformed_matrices = []
+    
+    # Define the value map based on the value_range_max parameter
+    if value_range_max == 3.5:
+        #value_map = {0: 3.5, 1: 2.5, 2: 1.5, 3: 0.5, 4: -0.5, 5: -1.5, 6: -2.5, 7: -3.5}
+        value_map = {0: -3.5, 1: -2.5, 2: -1.5, 3: -0.5, 4: 0.5, 5: 1.5, 6: 2.5, 7: 3.5}
+    elif value_range_max == 4:
+        value_map = {0: 4, 1: 3, 2: 2, 3: 1, 4: -1, 5: -2, 6: -3, 7: -4}
+    
+    # Vectorize the mapping function for efficient computation
+    vectorized_mapping = np.vectorize(lambda x: value_map.get(x, x))
+    
+    for matrix in matrix_list:
+        # Apply the mapped transformation to the matrix
+        transformed_matrix = vectorized_mapping(matrix)
+
+        # Replace lower triangular values with their negatives
+        lower_triangle_indices = np.tril_indices_from(transformed_matrix, k=-1)
+        transformed_matrix[lower_triangle_indices] *= -1
+
+        # Compute the average of the matrix with its transpose and take the absolute value
+        transformed_matrix = np.abs((transformed_matrix + transformed_matrix.transpose()) / 2)
+
+        # Set the diagonal elements to zero
+        np.fill_diagonal(transformed_matrix, 0)
+
+        # Append the transformed matrix to the list
+        transformed_matrices.append(transformed_matrix)
+    
+    return transformed_matrices
+
+
+def preference_antisymmetrise(rating_mats: np.ndarray) -> np.ndarray:
+    """
+    Convert raw preference rating matrices into antisymmetrised (skew-symmetric) form.
+
+    Parameters
+    ----------
+    rating_mats : np.ndarray
+        3D array (stim x stim x participants), raw preference matrices.
+
+    Returns
+    -------
+    asym_mats : np.ndarray
+        3D array (stim x stim x participants), antisymmetrised matrices.
+    """
+    asym_mats = np.full_like(rating_mats, np.nan, dtype=float)
+
+    n_stim, _, n_participants = rating_mats.shape
+
+    for p in range(n_participants):
+        for a in range(n_stim):
+            for b in range(a, n_stim):  # include diagonal
+                ab = rating_mats[a, b, p]
+                ba = rating_mats[b, a, p]
+
+                if np.sign(ab) != np.sign(ba):
+                    # Opposite signs → average of abs values
+                    ab_mean = np.mean([abs(ab), abs(ba)])
+
+                    ab_new, ba_new = ab_mean, ab_mean
+
+                    if ab == 0:
+                        ab_new = ab_mean * (-1 * np.sign(ba))
+                        ba_new = ab_mean * np.sign(ba)
+                    elif ba == 0:
+                        ab_new = ab_mean * np.sign(ab)
+                        ba_new = ab_mean * (-1 * np.sign(ab))
+                    else:
+                        # Both nonzero: keep original signs
+                        ab_new = ab_mean * np.sign(ab)
+                        ba_new = ab_mean * np.sign(ba)
+
+                else:
+                    # Same sign
+                    ab_mean = np.mean([ab, ba])
+
+                    ab_new = ab - ab_mean
+                    ba_new = ba - ab_mean
+
+                asym_mats[a, b, p] = ab_new
+                asym_mats[b, a, p] = ba_new
+
+    return asym_mats
 
 def compute_color_similarity_distance_batch(matrix_list):
     """

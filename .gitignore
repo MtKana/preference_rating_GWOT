@@ -1,3 +1,5 @@
 *.pkl
 raw_data/*
 __pycache__/*
+*.npy
+*.csv

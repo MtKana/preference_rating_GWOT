@@ -3,3 +3,5 @@ raw_data/*
 __pycache__/*
 *.npy
 *.csv
+20250710_minimal_averaging_subjects_similarity_distance 2
+20250721_matchingrate_distribution_similarity_distance_averaged.ipynb

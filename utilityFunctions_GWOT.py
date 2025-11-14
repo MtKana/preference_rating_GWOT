@@ -173,7 +173,180 @@ def GWD_and_plot(matrix1, matrix2, epsilons):
 
     return OT_plan, gwds, matching_rates, min_gwd, matching_rate
 
+def GWD_and_plot_rotational_OT(matrix1, matrix2, epsilons,
+                 rotinv_method: str = "fro_norm",
+                 rotinv_threshold: float | None = None,
+                 plot_candidates: bool = True):
 
+    def comp_matching_rate(OT_plan, k, order="maximum"):
+        diagonal = np.diag(OT_plan)
+        if order == "maximum":
+            topk_values = np.partition(OT_plan, -k)[:, -k:]
+        elif order == "minimum":
+            topk_values = np.partition(OT_plan, k - 1)[:, :k]
+        count = np.sum([diagonal[i] in topk_values[i] for i in range(OT_plan.shape[0])])
+        return count / OT_plan.shape[0] * 100.0
+    
+    def make_rotational_candidates(n: int):
+        """
+        Build 24 candidates for an n x n OT plan (n=12 expected):
+        - 12 cyclic row shifts of the identity (down by s = 0..n-1)
+        - 12 rotation-90° clockwise of each shifted matrix
+        Returns:
+        candidates: list[np.ndarray] of shape (n, n)
+        labels:     list[str] same length as candidates
+        """
+        eye = np.eye(n)
+        candidates, labels = [], []
+
+        for s in range(n):
+            # cyclic row shift (down) by s
+            P = np.roll(eye, shift=s, axis=0)
+            candidates.append(P)
+            labels.append(f"shift_{s}")
+
+            # 90° clockwise rotation of the shift
+            # np.rot90(..., k=-1) rotates 90° clockwise
+            P_rot = np.rot90(P, k=-1)
+            candidates.append(P_rot)
+            labels.append(f"shift_{s}_rot90")
+
+        return candidates, labels
+
+    def candidate_matching_scores(OT: np.ndarray,
+                                candidates: list[np.ndarray],
+                                method: str = "fro_norm",
+                                threshold: float | None = None):
+        """
+        Compute a score for each candidate vs the OT plan.
+        Methods:
+        - "fro_norm": <OT, P> / (||OT||_F * ||P||_F)  in [0,1]
+        - "mass_fraction": sum(OT * P) / sum(OT)      in [0,1]
+        - "threshold_hits": fraction of positions where both OT>=threshold and P==1
+                            (requires 'threshold' argument)
+        Returns: scores (list[float])
+        """
+        OT = np.asarray(OT, dtype=float)
+        scores = []
+
+        if method == "fro_norm":
+            ot_norm = np.linalg.norm(OT, ord="fro")
+            for P in candidates:
+                denom = ot_norm * np.linalg.norm(P, ord="fro")
+                # safe guard if denom == 0
+                score = 0.0 if denom == 0 else float(np.sum(OT * P) / denom)
+                scores.append(score)
+
+        elif method == "mass_fraction":
+            ot_sum = float(OT.sum())
+            for P in candidates:
+                score = 0.0 if ot_sum == 0 else float(np.sum(OT * P) / ot_sum)
+                scores.append(score)
+
+        elif method == "threshold_hits":
+            if threshold is None:
+                raise ValueError("threshold_hits method requires a 'threshold' value.")
+            mask = (OT >= threshold)
+            denom = mask.sum()
+            for P in candidates:
+                # count how many 'active' OT entries land on candidate ones
+                hits = np.logical_and(mask, (P == 1)).sum()
+                score = 0.0 if denom == 0 else float(hits / denom)
+                scores.append(score)
+        else:
+            raise ValueError(f"Unknown method '{method}'. Choose from 'fro_norm', 'mass_fraction', 'threshold_hits'.")
+
+        return scores
+
+    def plot_candidate_scores(scores, labels, title="Rotational Candidate Matching Rates"):
+        """
+        Simple line plot of 24 candidate scores.
+        """
+        x = np.arange(len(scores))
+        plt.figure(figsize=(14, 4))
+        plt.plot(x, scores, marker='o')
+        plt.xticks(x, labels, rotation=60, ha='right', fontsize=8)
+        plt.ylabel("Matching Rate (score)")
+        plt.xlabel("Candidate")
+        plt.title(title)
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+        
+    print("Computing Gromov-Wasserstein distances and optimal transport plans...")
+
+    OT_plans, gwds, matching_rates, valid_epsilons = [], [], [], []
+
+    for epsilon in epsilons:
+        OT, gw_log = ot.gromov.entropic_gromov_wasserstein(
+            C1=matrix1, C2=matrix2, epsilon=epsilon, loss_fun="square_loss", log=True
+        )
+        if not OT.any():
+            print(f"Skipping epsilon={epsilon} because it results in a zero transportation matrix.")
+            continue
+        gwd = gw_log['gw_dist']
+        mr = comp_matching_rate(OT, k=1)
+
+        OT_plans.append(OT)
+        gwds.append(gwd)
+        matching_rates.append(mr)
+        valid_epsilons.append(epsilon)
+
+        print(f"Epsilon: {epsilon}, GWD: {gwd}, Matching Rate: {mr}")
+
+    if not gwds:
+        raise ValueError("No valid epsilon values resulted in a non-zero transportation matrix.")
+
+    # Identify best epsilon
+    min_gwd = min(gwds)
+    best_idx = int(np.argmin(gwds))
+    best_eps = valid_epsilons[best_idx]
+    OT_plan = OT_plans[best_idx]
+    matching_rate = matching_rates[best_idx]
+
+    print(f"Best epsilon: {best_eps}, Minimum GWD: {min_gwd:.3f}")
+
+    # Plot GWD vs epsilon with color by (standard) matching rate
+    plt.figure()
+    sc = plt.scatter(valid_epsilons, gwds, c=matching_rates, cmap="viridis")
+    plt.xlabel("epsilon")
+    plt.ylabel("GWD")
+    plt.xscale("log")
+    plt.grid(True, which="both")
+    cbar = plt.colorbar(sc)
+    cbar.set_label(label="Matching Rate (%)")
+    plt.scatter([best_eps], [min_gwd], color="red", marker="o", label=f"Best ε={best_eps}")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # OT plan heatmap
+    show_heatmaps(
+        0, 0.1,
+        matrices=[OT_plan],
+        titles=[f'Optimal transportation plan \n GWD={min_gwd:.3f} \n Best ε={best_eps} \n Matching rate: {matching_rate:.1f}%'],
+        nrows=1, ncols=1, cbar_label=None, color_labels=None, cmap_name='viridis'
+    )
+
+    # ---- Rotation-invariant matching rate & plot ----
+    n = OT_plan.shape[0]
+    candidates, labels = make_rotational_candidates(n)
+    cand_scores = candidate_matching_scores(OT_plan, candidates,
+                                            method=rotinv_method,
+                                            threshold=rotinv_threshold)
+    rotinv_max_score = float(np.max(cand_scores))
+    rotinv_best_label = labels[int(np.argmax(cand_scores))]
+    print(f"RotInv best candidate: {rotinv_best_label}, score={rotinv_max_score:.3f}")
+
+    if plot_candidates:
+        plot_candidate_scores(
+            cand_scores,
+            labels,
+            title="Rotational Candidate Matching Rates (vs. OT plan at best ε)"
+        )
+
+    # Return everything your code already expects, plus the rotation-invariant max
+    return OT_plan, gwds, matching_rates, min_gwd, matching_rate, candidates, labels, cand_scores, rotinv_best_label, rotinv_max_score
 
 # def compute_GWOT_for_all_pairs(matrix_pairs, epsilons):
 #     results = []

@@ -9,6 +9,9 @@ Read csv data files and save into one .mat data file
 %% Get list of files
 
 source_dir = '../raw_data/kana_colourpreferencequalia-master/data/';
+source_dir = '../raw_data/data_20251126/';
+
+source_dir = '../raw_data/Preference Qualia V2 Participant Data/';
 
 % Get list of files in data folder
 files = cellstr(ls([source_dir '*.csv']));
@@ -26,5 +29,6 @@ end
 
 out_dir = 'data_mat/';
 out_file = 'data.mat';
+out_file = 'dataV2.mat';
 
 save([out_dir out_file], 'data', 'files');
